@@ -1,0 +1,11 @@
+{
+  "name": "bheja-frai-tests",
+  "private": true,
+  "scripts": {
+    "smoke": "node smoke.js",
+    "smoke-canvas": "node smoke-canvas.js"
+  },
+  "devDependencies": {
+    "jsdom": "^26.0.0"
+  }
+}
