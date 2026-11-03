@@ -2,6 +2,8 @@
 
 An interactive beginner course on AI, built as a single self-contained web page. It explains the ideas behind the open-source course [AI Engineering from Scratch](https://github.com/rohitg00/ai-engineering-from-scratch) (MIT licensed, not affiliated).
 
+**Live page: https://claude.ai/artifact/6uwdXmwqpk53gQxkfobkPk**
+
 Each lesson has a short explanation, a live demo, and a two-question quiz. XP and streaks are saved in the browser.
 
 ## What is open so far
