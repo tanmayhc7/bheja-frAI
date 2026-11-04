@@ -125,6 +125,13 @@ p{margin:0;text-wrap:pretty}
 .pf .pass{color:var(--go);font-weight:700}
 .pf .fail{color:var(--bad);font-weight:700}
 .pf .later{color:var(--xp);font-weight:700}
+.fa{background:var(--well);border-radius:14px;padding:4px 16px}
+.fa summary{cursor:pointer;font-weight:600;padding:12px 0;min-height:44px;display:flex;align-items:center}
+.fstep{border-top:1px solid var(--line);padding:14px 0;display:grid;gap:10px;min-width:0}
+.fstep h4{font-size:1rem;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.badge{font:600 12px var(--f-mono);padding:3px 10px;border-radius:999px}
+.badge.need{background:var(--go-soft);color:var(--go)}
+.badge.later{background:var(--xp-soft);color:var(--xp)}
 #gl-link{text-decoration:none}
 .gl{color:inherit;text-decoration:underline dotted var(--accent);text-decoration-thickness:2px;text-underline-offset:3px;cursor:help}
 .gl:hover{color:var(--accent-deep);text-decoration-style:solid}
@@ -729,7 +736,16 @@ lesson(0,{id:'setup',short:'Repo setup, tl;dr',title:'What the repo setup actual
   demo:'preflight',takeaway:'The 295-line checker is mostly two tables. One lists how to test each tool and what to do if it fails. The other lists which tools each learning route needs now and which can wait. The rest is printing.',
   quiz:[{q:'Your route is beginner and Git is missing. What does the script do?',o:['Shows FAIL for Git with a fix command, then exits with an error','Installs Git for you','Skips Git because it is optional'],a:0,why:'It only checks. A missing required tool prints FAIL plus a fix, and the script exits with 1 so you know to repeat it.',hint:'Switch Git off in the demo and read the last lines.'},
         {q:'On the beginner route Node.js is missing. Do you need to fix it before starting?',o:['No, it is only needed later, so it shows as LATER','Yes, the check fails','Yes, Python stops working without it'],a:0,why:'Beginner needs only Python 3.11+ and Git to start. Other tools are reported as LATER, and only when you add --show-later.',hint:'Turn on --show-later and look at the Node.js line.'}],
-  cmds:[['1. Copy the course to your computer. This makes a folder with every lesson in it.','git clone https://github.com/rohitg00/ai-engineering-from-scratch.git\ncd ai-engineering-from-scratch'],
+  follow:{title:'Follow along: the repo\'s setup steps, in order',steps:[
+    {need:true,title:'1. System basics',note:'Installs Git and the tools the later steps use. Run the line for your system. On Windows the course uses WSL2, a Linux inside Windows, so run the rest of the steps inside it.',code:'# macOS\nxcode-select --install\nbrew install git curl wget\n\n# Ubuntu or Debian\nsudo apt update && sudo apt install -y build-essential git curl wget unzip\n\n# Windows (use WSL2)\nwsl --install -d Ubuntu-24.04'},
+    {need:true,title:'2. Python 3.12 with uv',note:'uv installs Python and makes a virtual environment for the course. The last line installs packages you will use from Phase 1 on.',code:'curl -LsSf https://astral.sh/uv/install.sh | sh\nuv python install 3.12\nuv venv\nsource .venv/bin/activate  # Windows without WSL: .venv\\Scripts\\activate\nuv pip install numpy matplotlib jupyter\n\n# check it worked\npython3 -c "import sys, numpy as np; print(sys.version); print(np.dot(np.array([1,2,3]), np.array([1,2,3])))"'},
+    {title:'3. Node.js with pnpm',note:'For the TypeScript lessons on agents and MCP servers. On an Apple Silicon Mac, if the installer says it cannot install under Rosetta 2, run "arch -arm64 brew install fnm" first, add the eval line to ~/.zshrc, and start again from "fnm install 22".',code:'curl -fsSL https://fnm.vercel.app/install | bash\nfnm install 22\nfnm use 22\nnpm install -g pnpm\nnode -e "console.log(\'Node\', process.version)"\n\n# Apple Silicon fix, only if the installer stops under Rosetta 2\narch -arm64 brew install fnm\necho \'eval "$(fnm env --use-on-cd)"\' >> ~/.zshrc\nsource ~/.zshrc'},
+    {title:'4. Rust',note:'For the performance lessons on inference and systems. Restart your terminal after it installs.',code:'curl --proto \'=https\' --tlsv1.2 -sSf https://sh.rustup.rs | sh\nrustc --version\ncargo --version'},
+    {opt:true,title:'5. Julia',note:'Only for a few math-heavy lessons. Skip it for now if you like.',code:'curl -fsSL https://install.julialang.org | sh\njulia -e \'println("Julia ", VERSION)\''},
+    {opt:true,title:'6. GPU support',note:'Skip this if you have no GPU, since most lessons run on a CPU. On an NVIDIA card use the first install line. On a Mac there is no CUDA, so use the second line, which includes the MPS backend. Do not add the CUDA index URL on a Mac.',code:'# NVIDIA (Linux or Windows)\nnvidia-smi\nuv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124\n\n# Mac (Apple Silicon)\nuv pip install torch torchvision torchaudio\n\n# check on any system\npython3 -c "import torch; print(torch.cuda.is_available(), torch.backends.mps.is_available())"'},
+    {need:true,title:'7. Run the check for your route',note:'Run this from the repo folder, the one containing README.md and phases/. Fix the first FAIL line, then run it again. Swap beginner for ml-foundations, llm-engineering, agents, mcp, agent-skills or certification, and add --show-later to also see later tools.',code:'python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route beginner'}
+  ]},
+  cmds:[['Quick path once your tools are ready. 1. Copy the course to your computer. This makes a folder with every lesson in it.','git clone https://github.com/rohitg00/ai-engineering-from-scratch.git\ncd ai-engineering-from-scratch'],
         ['2. Run the preflight check from that folder. Add --show-later to also see tools you will want further on.','python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route beginner'],
         ['3. Run the first math lesson. It needs no extra packages.','python3 phases/01-math-foundations/01-linear-algebra-intuition/code/vectors.py']],
   links:[['Dev environment lesson',P0+'01-dev-environment'],['verify.py',REPO+'/blob/main/phases/00-setup-and-tooling/01-dev-environment/code/verify.py'],['README: Run local code',REPO+'#local-setup']]});
@@ -810,6 +826,9 @@ var GLOSSARY=[
  {id:'package',term:'package',pat:'packages?',def:'Ready-made code that you install and use in your own project, such as numpy.'},
  {id:'perp',term:'perpendicular',pat:'perpendicular',def:'At a right angle (90 degrees). Perpendicular vectors share no direction, so their dot product is 0.'},
  {id:'pip',term:'pip',def:'Python\'s tool for installing packages, for example "pip install numpy".'},
+ {id:'uv',term:'uv',pat:'uv',def:'A fast tool that installs Python versions, creates virtual environments and installs packages. The course uses it instead of plain pip.'},
+ {id:'cuda',term:'CUDA',pat:'CUDA',def:'NVIDIA\'s system for running code on its GPUs. PyTorch uses it when you have an NVIDIA card.'},
+ {id:'mps',term:'MPS',pat:'MPS',def:'Apple\'s GPU backend for Apple Silicon Macs, used by PyTorch where NVIDIA machines use CUDA. A Mac has no CUDA, which is expected.'},
  {id:'preflight',term:'preflight check',pat:'preflight(?: check)?',def:'A quick check you run before starting, to confirm everything needed is in place. The course\'s verify.py is one. It only looks and reports, and it installs nothing.'},
  {id:'path',term:'PATH',def:'The list of folders your terminal searches when you type a command. If a tool is "not found on PATH", the terminal cannot locate it.'},
  {id:'terminal',term:'terminal',pat:'terminals?',def:'The text window where you type commands, such as Terminal on a Mac.'},
@@ -923,6 +942,17 @@ function buildQuiz(i){
   box.append(h('div',{id:'banner'}));
   return box;
 }
+function followBox(L){
+  var f=L.follow;if(!f)return null;var box=h('details',{class:'fa'},h('summary',{text:f.title}));
+  var seen={};
+  f.steps.forEach(function(st,n){
+    box.append(h('div',{class:'fstep'},
+      h('h4',null,h('span',{text:st.title}),h('span',{class:'badge '+(st.need?'need':'later'),text:st.need?'needed to start':st.opt?'optional':'needed later'})),
+      h('p',{class:'note'},gl(st.note,seen)),
+      codeBox('fa-'+L.id+'-'+n,st.code)));
+  });
+  return box;
+}
 function watchBox(L){
   var w=L.watch;if(!w)return null;var box=h('div',{class:'watch'});
   if(w.kind==='video'){
@@ -939,9 +969,9 @@ function select(i,user){
   L.links.forEach(function(l){links.append(h('a',{href:l[1],target:'_blank',rel:'noopener',text:l[0]}))});
   var cmds=null,seen={},leadN=gl(L.lead,seen),takeN=gl(L.takeaway,seen);
   if(L.cmds){cmds=h('div',{class:'cmd'},h('h3',{text:'Run it for real'}));L.cmds.forEach(function(c){cmds.append(h('p',{class:'note'},gl(c[0],seen)),codeBox('cmd-'+L.id+'-'+(cmdN++),c[1]))})}
-  var wb=watchBox(L);
+  var wb=watchBox(L),follow=followBox(L);
   [h('p',{class:'tag',text:L.tag}),h('h2',{id:'lesson-title',tabindex:'-1',text:L.title}),h('p',{class:'lead'},leadN),
-    wb&&wb.head,wb&&wb.box,h('h3',{text:'Try it'}),demo,h('p',{class:'takeaway'},takeN),buildQuiz(i),cmds,links].forEach(function(n){if(n)root.append(n)});
+    wb&&wb.head,wb&&wb.box,h('h3',{text:'Try it'}),demo,h('p',{class:'takeaway'},takeN),buildQuiz(i),follow,cmds,links].forEach(function(n){if(n)root.append(n)});
   DEMOS[L.demo](demo);buildPath();
   try{history.replaceState(null,'','#'+L.id)}catch(e){}
   if(user){var t=$('#lesson-title');if(t)t.focus({preventScroll:true});if(window.innerWidth<=820)root.scrollIntoView({block:'start'})}
