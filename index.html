@@ -121,6 +121,18 @@ p{margin:0;text-wrap:pretty}
 .why.bad{color:var(--bad)}
 .banner{padding:14px 16px;border-radius:12px;background:var(--go-soft);color:var(--ink);display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
 .links{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:.9375rem}
+.gl{color:inherit;text-decoration:underline dotted var(--accent);text-decoration-thickness:2px;text-underline-offset:3px;cursor:help}
+.gl:hover{color:var(--accent-deep);text-decoration-style:solid}
+.gtools{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.gsearch{font:500 16px var(--f-body);padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);min-height:44px;width:min(100%,360px)}
+.glist{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px;margin:0}
+.gent{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;scroll-margin-top:16px;min-width:0}
+.gent dt{font:600 1.125rem var(--f-display)}
+.gent dfn{font-style:normal}
+.gent dd{margin:0;display:flex;flex-direction:column;gap:8px}
+.gent.hit{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.gent[hidden]{display:none}
+.gused{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .sec{display:flex;flex-direction:column;gap:16px}
 .sec>p{max-width:68ch;color:var(--ink2)}
 .sec h2{font-size:clamp(1.5rem,3.4vw,2.1rem)}
@@ -172,6 +184,7 @@ tr:last-child td{border-bottom:0}
       <span class="pill xp"><span id="st-xp">0</span> XP</span>
       <span class="pill"><span id="st-streak">0</span>-day streak</span>
       <span class="pill"><span id="st-done">0</span>/<span id="st-total">0</span> lessons</span>
+      <a class="btn ghost small" id="gl-link" href="#glossary">Glossary</a>
       <button class="btn ghost small" id="theme" type="button">Switch theme</button>
     </div>
   </header>
@@ -238,6 +251,17 @@ python3 phases/01-math-foundations/01-linear-algebra-intuition/code/vectors.py</
     <div class="row"><button class="btn ghost small" id="reset" type="button">Reset my progress</button><span class="note" id="reset-note" role="status"></span></div>
   </section>
 
+  <section class="sec" id="glossary" aria-labelledby="gl-h">
+    <h2 id="gl-h">Glossary</h2>
+    <p>Plain meanings for the jargon in the lessons. In a lesson, a word with a dotted underline links here.</p>
+    <div class="gtools">
+      <label for="gl-q" class="note">Find a word</label>
+      <input class="gsearch" id="gl-q" type="search" autocomplete="off" placeholder="for example: venv, bias, commit">
+      <span class="note" id="gl-count" role="status"></span>
+    </div>
+    <dl class="glist" id="glist"></dl>
+  </section>
+
   <p class="foot">An independent explainer written from the public README of rohitg00/ai-engineering-from-scratch. It is not affiliated with the course. Numbers inside the demos are made up for teaching and do not come from the course.</p>
 </div>
 
@@ -247,8 +271,9 @@ python3 phases/01-math-foundations/01-linear-algebra-intuition/code/vectors.py</
   1. Write a demo:      DEMOS.myDemo = function(host){ ... host.append(...) };
   2. Register a lesson: lesson(2, { id, short, title, tag, lead, demo:'myDemo', takeaway, quiz:[{q,o,a,why,hint}], links:[[label,url]], cmds:[[note,code]] });
      The first argument is the phase number (0 to 19). Ids must be unique and never change, because progress is saved by id.
-  3. Optional: add watch:{kind:'steps',id:'x'} (define WATCH.x with steps and a draw function) or watch:{kind:'video',src:'media/x.mp4',cap:'...'} to a lesson.
-  4. Nothing else. The path, counters, phase map and quiz pick the lesson up on their own.
+  3. Jargon: add an entry to GLOSSARY ({id,term,pat,def}). Its first use in a lesson's lead, takeaway, quiz questions and command notes links to it automatically. Omit pat for glossary-only terms.
+  4. Optional: add watch:{kind:'steps',id:'x'} (define WATCH.x with steps and a draw function) or watch:{kind:'video',src:'media/x.mp4',cap:'...'} to a lesson.
+  5. Nothing else. The path, counters, phase map and quiz pick the lesson up on their own.
 */
 (function(){
 'use strict';
@@ -689,6 +714,109 @@ lesson(1,{id:'gradient-descent',short:'Rolling downhill',title:'Learning is roll
         {q:'What does the gradient tell you?',o:['Which way is uphill, so you step the opposite way','How many steps are left','The final value of w'],a:0,why:'The gradient points uphill. Descent subtracts it, which moves you downhill.',hint:'Check the sign of the gradient when w is left of the minimum.'}],
   links:[['Optimization: the gradient descent family',P1+'08-optimization'],['Calculus for ML',P1+'04-calculus-for-ml'],['Backpropagation from scratch (Phase 3)',REPO+'/tree/main/phases/03-deep-learning-core/03-backpropagation']]});
 
+/* ================= GLOSSARY ================= */
+/* One entry per term. pat = regex source that finds it in lesson text (omit for glossary-only terms). */
+var GLOSSARY=[
+ {id:'bias',term:'bias',pat:'bias',def:'A number a neuron adds to its weighted sum before deciding its output. It shifts how easily the neuron switches on.'},
+ {id:'branch',term:'branch',pat:'branch(?:es)?',def:'A separate line of commits in Git. You can try an idea on a branch without touching the main line.'},
+ {id:'clone',term:'clone',pat:'clon(?:e|es|ed|ing)',def:'Download a full copy of a Git repository, with its history, onto your computer.'},
+ {id:'commit',term:'commit',pat:'commits?',def:'A saved snapshot of your project in Git, with a short message about what changed. Each commit points back to the one before it.'},
+ {id:'cosine',term:'cosine similarity',pat:'cosine similarity',def:'A score for how closely two vectors point the same way. 1 means the same direction, 0 means unrelated, and -1 means opposite. Length is ignored.'},
+ {id:'cpu',term:'CPU',pat:'CPUs?',def:'The general-purpose chip in a computer. It has a few strong cores, and each handles one task at a time very quickly.'},
+ {id:'dot',term:'dot product',pat:'dot product',def:'Multiply two lists of numbers entry by entry, then add the results. For two vectors it is 0 when they are perpendicular.'},
+ {id:'embedding',term:'embedding',def:'A vector that stands for a word, image or other item, built so that similar items get similar vectors. Comes up later in the course.'},
+ {id:'gpu',term:'GPU',pat:'GPUs?',def:'A chip with thousands of simple cores that work at the same time. It suits jobs that split into many independent pieces, such as neural network math.'},
+ {id:'gradient',term:'gradient',pat:'gradients?',def:'The direction and steepness of uphill on a curve such as the loss. Gradient descent steps the opposite way, which is downhill.'},
+ {id:'gd',term:'gradient descent',pat:'gradient descent',def:'Reduce error by repeating one step: work out the gradient of the loss, then move the weights a little in the opposite direction.'},
+ {id:'head',term:'HEAD',def:'The pointer Git uses for "where you are now". It normally sits on the latest commit of the branch you have checked out.'},
+ {id:'input',term:'input',pat:'inputs?',def:'A number fed into a neuron or model, such as wind speed in the umbrella demo.'},
+ {id:'install',term:'install',pat:'install(?:s|ed|ing)?',def:'Download a package and put it where Python can find it, usually with pip.'},
+ {id:'layer',term:'layer',pat:'layers?',def:'A group of neurons that process the same inputs side by side. A network is a stack of layers.'},
+ {id:'lr',term:'learning rate',pat:'learning rate',def:'The size of each step in gradient descent. Too small is slow, and too large overshoots.'},
+ {id:'loss',term:'loss',pat:'loss',def:'One number that says how wrong the model is. Training tries to make it smaller.'},
+ {id:'main',term:'main',pat:'main',def:'The default branch in a Git project, where the working version of the code normally lives.'},
+ {id:'matrix',term:'matrix',def:'A grid of numbers. Multiplying by a matrix applies many weighted sums at once, which is what a network layer does.'},
+ {id:'merge',term:'merge',pat:'merge[ds]?|merging',def:'Bring the commits from one branch into another, for example a finished experiment back into main.'},
+ {id:'minimum',term:'minimum',pat:'minimum',def:'The lowest point of the loss curve, where the error is smallest. Gradient descent tries to get there.'},
+ {id:'model',term:'model',pat:'models?',def:'A program whose behaviour comes from numbers it has learned, called weights, rather than from rules a person wrote.'},
+ {id:'nn',term:'neural network',pat:'neural networks?',def:'Many neurons arranged in layers, with weights that are learned from data.'},
+ {id:'neuron',term:'neuron',pat:'neurons?',def:'The smallest unit of a neural network. It multiplies each input by a weight, adds a bias, and passes the total through a rule such as ReLU.'},
+ {id:'numpy',term:'numpy',pat:'numpy',def:'A popular Python package for fast math on lists and grids of numbers.'},
+ {id:'overshoot',term:'overshoot',pat:'overshoot(?:s|ing)?',def:'Stepping past the lowest point because the step was too big. If each overshoot is bigger than the last, the loss grows instead of shrinking.'},
+ {id:'package',term:'package',pat:'packages?',def:'Ready-made code that you install and use in your own project, such as numpy.'},
+ {id:'perp',term:'perpendicular',pat:'perpendicular',def:'At a right angle (90 degrees). Perpendicular vectors share no direction, so their dot product is 0.'},
+ {id:'pip',term:'pip',def:'Python\'s tool for installing packages, for example "pip install numpy".'},
+ {id:'relu',term:'ReLU',pat:'ReLU',def:'A simple rule used inside neurons: a negative total becomes 0, and a positive total passes through unchanged.'},
+ {id:'repo',term:'repository (repo)',pat:'repos?(?:itory)?',def:'A project folder tracked by Git, including its full history of commits.'},
+ {id:'script',term:'script',pat:'scripts?',def:'A file of code you run from the terminal, such as verify.py.'},
+ {id:'snapshot',term:'snapshot',pat:'snapshots?',def:'The exact state of all your files at one moment. In Git, each commit stores one.'},
+ {id:'training',term:'training',pat:'training',def:'Repeatedly adjusting a model\'s weights so that its loss gets smaller on example data.'},
+ {id:'vector',term:'vector',pat:'vectors?',def:'A list of numbers. It can be drawn as an arrow, with a direction and a length.'},
+ {id:'venv',term:'virtual environment (venv)',pat:'virtual environments?|venvs?',def:'A private folder of Python packages for one project, so installing something there cannot break another project. Create one with "python3 -m venv .venv".'},
+ {id:'version',term:'version',pat:'versions?',def:'A numbered release of a package, such as numpy 2.1. Different projects can need different versions.'},
+ {id:'weight',term:'weight',pat:'weights?',def:'A number that says how much one input counts. A big weight makes that input matter more, and a negative weight pulls the total down.'},
+ {id:'wsum',term:'weighted sum',pat:'weighted sum',def:'Multiply each input by its weight and add up the results. It is the core calculation inside a neuron.'}
+];
+var GL_RX=null,GL_BY={},glBack=null;
+(function(){
+  var withPat=GLOSSARY.filter(function(g){return g.pat}).sort(function(a,b){return b.term.length-a.term.length});
+  GLOSSARY.forEach(function(g){GL_BY[g.id]=g});
+  withPat.forEach(function(g){g.rx=new RegExp('^(?:'+g.pat+')$','i')});
+  GL_RX={list:withPat,rx:new RegExp('\\b(?:'+withPat.map(function(g){return '('+g.pat+')'}).join('|')+')\\b','gi')};
+})();
+/* gl(text, seen): returns nodes with the first use of each term linked to the glossary. */
+function gl(text,seen){
+  seen=seen||{};var out=[],last=0,m,rx=GL_RX.rx;rx.lastIndex=0;
+  while((m=rx.exec(text))){
+    var g=null;for(var k=1;k<m.length;k++){if(m[k]!==undefined){g=GL_RX.list[k-1];break}}
+    if(!g||seen[g.id])continue;seen[g.id]=1;
+    if(m.index>last)out.push(text.slice(last,m.index));
+    out.push(h('a',{class:'gl',href:'#g-'+g.id,'data-g':g.id,title:g.term+': '+g.def,text:m[0],onclick:glClick}));
+    last=m.index+m[0].length;
+  }
+  if(last<text.length)out.push(text.slice(last));
+  return out;
+}
+function glClick(e){e.preventDefault();openGloss(this.getAttribute('data-g'),this)}
+function glMentions(g){
+  var res=[];if(!g.rx)return res;var rx=new RegExp('\\b(?:'+g.pat+')\\b','i');
+  flat().forEach(function(L,i){
+    var t=[L.lead,L.takeaway].concat(L.quiz.map(function(q){return q.q}),(L.cmds||[]).map(function(c){return c[0]})).join(' ');
+    if(rx.test(t))res.push(i);
+  });
+  return res;
+}
+function renderGloss(){
+  var list=$('#glist');list.textContent='';
+  GLOSSARY.slice().sort(function(a,b){return a.term.toLowerCase()<b.term.toLowerCase()?-1:1}).forEach(function(g){
+    var used=glMentions(g),all=flat();
+    var dd=h('dd',null,h('p',{text:g.def}));
+    if(used.length){var u=h('div',{class:'gused'},h('span',{class:'note',text:'Used in:'}));
+      used.forEach(function(i){u.append(h('button',{class:'chip',type:'button',text:all[i].short,onclick:function(){select(i,true);$('#course').scrollIntoView({block:'start'})}}))});dd.append(u)}
+    var back=h('button',{class:'btn ghost small gback',type:'button',hidden:true,text:'Back to the lesson',onclick:function(){glReturn()}});
+    dd.append(back);
+    list.append(h('div',{class:'gent',id:'g-'+g.id,tabindex:'-1','data-t':(g.term+' '+g.def).toLowerCase()},h('dt',null,h('dfn',{text:g.term})),dd));
+  });
+  var q=$('#gl-q');
+  function filter(){var v=q.value.trim().toLowerCase(),n=0;
+    document.querySelectorAll('.gent').forEach(function(e){var ok=!v||e.getAttribute('data-t').indexOf(v)>-1;e.hidden=!ok;if(ok)n++});
+    $('#gl-count').textContent=v?(n===0?'No matches.':n+(n===1?' match':' matches')):''}
+  q.addEventListener('input',filter);
+  $('#gl-link').addEventListener('click',function(e){e.preventDefault();$('#glossary').scrollIntoView({block:'start'});glBack=null});
+}
+function openGloss(id,from){
+  var q=$('#gl-q');if(q.value){q.value='';q.dispatchEvent(new Event('input'))}
+  document.querySelectorAll('.gent').forEach(function(e){e.classList.remove('hit');var b=e.querySelector('.gback');if(b)b.hidden=true});
+  var e=document.getElementById('g-'+id);if(!e)return;
+  glBack=from||null;e.classList.add('hit');
+  if(from){var b=e.querySelector('.gback');if(b)b.hidden=false}
+  e.scrollIntoView({block:'center'});e.focus({preventScroll:true});
+}
+function glReturn(){
+  var f=glBack;glBack=null;document.querySelectorAll('.gback').forEach(function(b){b.hidden=true});
+  if(f&&document.contains(f)){f.scrollIntoView({block:'center'});f.focus({preventScroll:true})}else $('#course').scrollIntoView({block:'start'});
+}
+
 /* ================= UI ================= */
 var cur=0,cmdN=0;
 function buildPath(){
@@ -723,7 +851,7 @@ function buildQuiz(i){
         else{b.classList.add('no');b.disabled=true;why.className='why bad';why.textContent='Not quite. '+q.hint}}});
       btns.push(b);opts.append(b);
     });
-    box.append(h('div',{class:'q',role:'group','aria-labelledby':gid},h('div',{class:'qt',id:gid,text:q.q}),opts,why));
+    box.append(h('div',{class:'q',role:'group','aria-labelledby':gid},h('div',{class:'qt',id:gid},gl(q.q,{})),opts,why));
   });
   box.append(h('div',{id:'banner'}));
   return box;
@@ -742,11 +870,11 @@ function select(i,user){
   var demo=h('div',{class:'demo',id:'demo'});
   var links=h('div',{class:'links'},h('strong',{text:'In the repo:'}));
   L.links.forEach(function(l){links.append(h('a',{href:l[1],target:'_blank',rel:'noopener',text:l[0]}))});
-  var cmds=null;
-  if(L.cmds){cmds=h('div',{class:'cmd'},h('h3',{text:'Run it for real'}));L.cmds.forEach(function(c){cmds.append(h('p',{class:'note',text:c[0]}),codeBox('cmd-'+L.id+'-'+(cmdN++),c[1]))})}
+  var cmds=null,seen={},leadN=gl(L.lead,seen),takeN=gl(L.takeaway,seen);
+  if(L.cmds){cmds=h('div',{class:'cmd'},h('h3',{text:'Run it for real'}));L.cmds.forEach(function(c){cmds.append(h('p',{class:'note'},gl(c[0],seen)),codeBox('cmd-'+L.id+'-'+(cmdN++),c[1]))})}
   var wb=watchBox(L);
-  [h('p',{class:'tag',text:L.tag}),h('h2',{id:'lesson-title',tabindex:'-1',text:L.title}),h('p',{class:'lead',text:L.lead}),
-    wb&&wb.head,wb&&wb.box,h('h3',{text:'Try it'}),demo,h('p',{class:'takeaway',text:L.takeaway}),buildQuiz(i),cmds,links].forEach(function(n){if(n)root.append(n)});
+  [h('p',{class:'tag',text:L.tag}),h('h2',{id:'lesson-title',tabindex:'-1',text:L.title}),h('p',{class:'lead'},leadN),
+    wb&&wb.head,wb&&wb.box,h('h3',{text:'Try it'}),demo,h('p',{class:'takeaway'},takeN),buildQuiz(i),cmds,links].forEach(function(n){if(n)root.append(n)});
   DEMOS[L.demo](demo);buildPath();
   try{history.replaceState(null,'','#'+L.id)}catch(e){}
   if(user){var t=$('#lesson-title');if(t)t.focus({preventScroll:true});if(window.innerWidth<=820)root.scrollIntoView({block:'start'})}
@@ -785,7 +913,8 @@ function init(){
   var all=flat(),id=(location.hash||'').slice(1),start=-1;all.forEach(function(L,i){if(L.id===id)start=i});
   if(start<0){start=0;for(var i=0;i<all.length;i++){if(!state.done[all[i].id]){start=i;break}}}
   window.addEventListener('hashchange',function(){var k=(location.hash||'').slice(1);flat().forEach(function(L,i){if(L.id===k&&i!==cur)select(i,false)})});
-  select(start,false);renderPh();
+  select(start,false);renderPh();renderGloss();
+  if(/^#g-/.test(location.hash)){var gid=location.hash.slice(3);setTimeout(function(){openGloss(gid,null)},0)}
 }
 init();
 })();
