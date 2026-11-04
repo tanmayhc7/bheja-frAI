@@ -121,6 +121,11 @@ p{margin:0;text-wrap:pretty}
 .why.bad{color:var(--bad)}
 .banner{padding:14px 16px;border-radius:12px;background:var(--go-soft);color:var(--ink);display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
 .links{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:.9375rem}
+.pf{white-space:pre-wrap;background:var(--surface);border-radius:10px;padding:12px;overflow-x:auto;font:500 13px/1.6 var(--f-mono);margin:0;color:var(--ink)}
+.pf .pass{color:var(--go);font-weight:700}
+.pf .fail{color:var(--bad);font-weight:700}
+.pf .later{color:var(--xp);font-weight:700}
+#gl-link{text-decoration:none}
 .gl{color:inherit;text-decoration:underline dotted var(--accent);text-decoration-thickness:2px;text-underline-offset:3px;cursor:help}
 .gl:hover{color:var(--accent-deep);text-decoration-style:solid}
 .gtools{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
@@ -191,7 +196,7 @@ tr:last-child td{border-bottom:0}
 
   <section class="intro">
     <h1>Learn the ideas behind AI by moving them around</h1>
-    <p>Phases 0 and 1 are open: set up your tools, then learn the math under every model. Each lesson has a short animation or video, something to drag or click, then two questions. The material follows the open-source course <a href="https://github.com/rohitg00/ai-engineering-from-scratch" target="_blank" rel="noopener">AI Engineering from Scratch</a>, and more phases will be added to this page.</p>
+    <p>Phases 0 and 1 are open: set up your tools, then learn the math under every model. Most lessons have a short animation or video, and all have something to drag or click, then two questions. The material follows the open-source course <a href="https://github.com/rohitg00/ai-engineering-from-scratch" target="_blank" rel="noopener">AI Engineering from Scratch</a>, and more phases will be added to this page.</p>
     <div class="facts">
       <span>Free and MIT licensed course</span>
       <span>542 lessons across 20 phases</span>
@@ -387,6 +392,55 @@ function chipAt(g,x,y,txt,a,fill,col,font){g.globalAlpha=a;g.font=font;var m=g.m
 /* ================= PHASE 0 DEMOS ================= */
 
 /* Python environments */
+DEMOS.preflight=function(host){
+  /* A simplified copy of verify.py. The real script knows 11 tools and 7 routes. */
+  var TOOLS={
+    python:{label:'Python 3.11+',ok:'Python 3.12.4',bad:'found Python 3.9.6; need Python 3.11+',fix:'Install it with `uv python install 3.12`, activate that environment, and rerun with `python3`.'},
+    git:{label:'Git',ok:'git version 2.45.1',bad:"'git' was not found on PATH",fix:'Run `xcode-select --install`, then `git --version`. (macOS)'},
+    node:{label:'Node.js 20+',ok:'v22.3.0',bad:"'node' was not found on PATH",fix:'Run `fnm install 22 && fnm use 22`, then `node --version`.'},
+    npx:{label:'npx',ok:'10.8.1',bad:"'npx' was not found on PATH",fix:'Install Node.js 22, then run `npm install -g npm` and `npx --version`.'},
+    numpy:{label:'NumPy',ok:'importable',bad:"'numpy' is not importable by python3",fix:'Activate the course environment and run `python3 -m pip install numpy`.'}
+  };
+  var ROUTES={
+    'beginner':{label:'Beginner course',req:['python','git'],opt:['node','npx','numpy']},
+    'ml-foundations':{label:'Math and ML foundations',req:['python','git','numpy'],opt:['node','npx']},
+    'mcp':{label:'Model Context Protocol (MCP)',req:['python','git'],opt:['node','npx']},
+    'agent-skills':{label:'Agent Skills engineering',req:['python','git','node','npx'],opt:[]}
+  };
+  var have={python:true,git:false,node:false,npx:false,numpy:false},route='beginner',later=false;
+  var out=h('pre',{class:'pf','aria-live':'polite'}),routeBox=h('div',{class:'chips',role:'group','aria-label':'Route'}),toolBox=h('div',{class:'chips',role:'group','aria-label':'Tools installed on your computer'});
+  function line(parts){var d=document.createElement('span');parts.forEach(function(x){d.append(x)});d.append('\n');return d}
+  function status(cls,txt){return h('span',{class:cls,text:txt})}
+  function probe(key,required){
+    var t=TOOLS[key],ok=have[key],st=ok?['pass','PASS']:required?['fail','FAIL']:['later','LATER'];
+    out.append(line(['  [',status(st[0],st[1]),'] '+t.label+' ('+(required?'required now':'optional or needed later')+')']));
+    out.append(line(['         '+(ok?t.ok:t.bad)]));
+    if(!ok)out.append(line(['         Fix: '+t.fix]));
+    return ok;
+  }
+  function render(){
+    var R=ROUTES[route];out.textContent='';
+    out.append(line(['=== AI Engineering from Scratch: Environment Check ===']),line(['']),line(['Route: '+R.label+' (`--route '+route+'`)']),line(['']));
+    var passed=0;R.req.forEach(function(k){passed+=probe(k,true)?1:0});
+    if(R.opt.length&&later){out.append(line(['']),line(['Optional or needed later:']));R.opt.forEach(function(k){probe(k,false)})}
+    else if(R.opt.length){out.append(line(['']),line(['Later checks skipped: '+R.opt.length+' tools are not needed to start. Add `--show-later` to inspect them.']))}
+    out.append(line(['']),line(['Result: '+passed+'/'+R.req.length+' required checks passed']));
+    if(passed===R.req.length)out.append(line(['Ready to start '+R.label+'.']));
+    else out.append(line(['Not ready yet. Run each Fix command above, then repeat this preflight.']));
+    routeBox.textContent='';Object.keys(ROUTES).forEach(function(k){routeBox.append(h('button',{class:'chip',type:'button','aria-pressed':k===route?'true':'false',text:k,onclick:function(){route=k;render()}}))});
+    toolBox.textContent='';Object.keys(TOOLS).forEach(function(k){toolBox.append(h('button',{class:'chip',type:'button','aria-pressed':have[k]?'true':'false',text:TOOLS[k].label,onclick:function(){have[k]=!have[k];render()}}))});
+    laterBtn.setAttribute('aria-pressed',later?'true':'false');
+  }
+  var laterBtn=h('button',{class:'chip',type:'button',text:'--show-later',onclick:function(){later=!later;render()}});
+  host.append(
+    h('p',{class:'note',text:'Pick a route, then switch tools on and off to pretend they are installed. The output below follows the real script.'}),
+    h('p',{class:'note',text:'Route'}),routeBox,
+    h('p',{class:'note',text:'Installed on your computer'}),toolBox,
+    h('div',{class:'chips'},laterBtn),
+    out,
+    h('p',{class:'note',text:'Simplified: the real verify.py knows 11 tools and 7 routes. Exit code is 0 when every required check passes and 1 when it does not.'}));
+  render();
+};
 DEMOS.venv=function(host){
   var REQ={A:'1.26',B:'2.1'},DIR={A:'project-a',B:'project-b'},NAME={A:'Project A',B:'Project B'};
   var mode='shared',inst,shared,iso,last;
@@ -670,6 +724,16 @@ WATCH.gd={label:'An animated curve of the loss (w minus 2) squared with a dot ta
 /* ================= LESSONS ================= */
 var P0=REPO+'/tree/main/phases/00-setup-and-tooling/',P1=REPO+'/tree/main/phases/01-math-foundations/';
 
+lesson(0,{id:'setup',short:'Repo setup, tl;dr',title:'What the repo setup actually does',tag:'Behind Phase 0, lesson 1: Dev Environment',
+  lead:'TL;DR: the README setup is three steps. Clone the course to your computer, run a preflight check that tells you which tools are missing and how to fix each one, then run a first lesson. The check only looks. It installs nothing.',
+  demo:'preflight',takeaway:'The 295-line checker is mostly two tables. One lists how to test each tool and what to do if it fails. The other lists which tools each learning route needs now and which can wait. The rest is printing.',
+  quiz:[{q:'Your route is beginner and Git is missing. What does the script do?',o:['Shows FAIL for Git with a fix command, then exits with an error','Installs Git for you','Skips Git because it is optional'],a:0,why:'It only checks. A missing required tool prints FAIL plus a fix, and the script exits with 1 so you know to repeat it.',hint:'Switch Git off in the demo and read the last lines.'},
+        {q:'On the beginner route Node.js is missing. Do you need to fix it before starting?',o:['No, it is only needed later, so it shows as LATER','Yes, the check fails','Yes, Python stops working without it'],a:0,why:'Beginner needs only Python 3.11+ and Git to start. Other tools are reported as LATER, and only when you add --show-later.',hint:'Turn on --show-later and look at the Node.js line.'}],
+  cmds:[['1. Copy the course to your computer. This makes a folder with every lesson in it.','git clone https://github.com/rohitg00/ai-engineering-from-scratch.git\ncd ai-engineering-from-scratch'],
+        ['2. Run the preflight check from that folder. Add --show-later to also see tools you will want further on.','python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route beginner'],
+        ['3. Run the first math lesson. It needs no extra packages.','python3 phases/01-math-foundations/01-linear-algebra-intuition/code/vectors.py']],
+  links:[['Dev environment lesson',P0+'01-dev-environment'],['verify.py',REPO+'/blob/main/phases/00-setup-and-tooling/01-dev-environment/code/verify.py'],['README: Run local code',REPO+'#local-setup']]});
+
 lesson(0,{id:'envs',short:'Python environments',title:'Every project gets its own packages',tag:'Behind Phase 0, lesson 6: Python Environments',
   lead:'Different projects often need different versions of the same package. A virtual environment is a private folder of packages for one project, so an install in one project cannot break another.',
   watch:{kind:'video',src:'media/environments.mp4',cap:'18 seconds, no sound. Captions are on screen.'},demo:'venv',takeaway:'Make one environment per project and most version clashes never happen.',
@@ -746,6 +810,9 @@ var GLOSSARY=[
  {id:'package',term:'package',pat:'packages?',def:'Ready-made code that you install and use in your own project, such as numpy.'},
  {id:'perp',term:'perpendicular',pat:'perpendicular',def:'At a right angle (90 degrees). Perpendicular vectors share no direction, so their dot product is 0.'},
  {id:'pip',term:'pip',def:'Python\'s tool for installing packages, for example "pip install numpy".'},
+ {id:'preflight',term:'preflight check',pat:'preflight(?: check)?',def:'A quick check you run before starting, to confirm everything needed is in place. The course\'s verify.py is one. It only looks and reports, and it installs nothing.'},
+ {id:'path',term:'PATH',def:'The list of folders your terminal searches when you type a command. If a tool is "not found on PATH", the terminal cannot locate it.'},
+ {id:'terminal',term:'terminal',pat:'terminals?',def:'The text window where you type commands, such as Terminal on a Mac.'},
  {id:'relu',term:'ReLU',pat:'ReLU',def:'A simple rule used inside neurons: a negative total becomes 0, and a positive total passes through unchanged.'},
  {id:'repo',term:'repository (repo)',pat:'repos?(?:itory)?',def:'A project folder tracked by Git, including its full history of commits.'},
  {id:'script',term:'script',pat:'scripts?',def:'A file of code you run from the terminal, such as verify.py.'},
