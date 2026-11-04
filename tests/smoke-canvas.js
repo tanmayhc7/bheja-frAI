@@ -6,7 +6,7 @@ const vc=new VirtualConsole();vc.on('jsdomError',e=>errs.push('jsdomError: '+(e.
 const dom=new JSDOM(html,{runScripts:'dangerously',virtualConsole:vc,url:'https://example.test/',pretendToBeVisual:true,
  beforeParse(w){
   w.matchMedia=()=>({matches:false,addEventListener(){}});
-  const g=new Proxy({},{get:(t,k)=>k in t?t[k]:(...a)=>{calls++},set:(t,k,v)=>{t[k]=v;return true}});
+  const g=new Proxy({},{get:(t,k)=>k in t?t[k]:k==='measureText'?(s=>({width:String(s).length*7})):(...a)=>{calls++},set:(t,k,v)=>{t[k]=v;return true}});
   w.HTMLCanvasElement.prototype.getContext=function(){return g};
   Object.defineProperty(w.HTMLElement.prototype,'clientWidth',{get(){return 640}});
  }});
