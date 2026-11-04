@@ -19,22 +19,22 @@ const click=el=>el.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
   }
   // git: spam commits/branches/merge
 });
-click([...d.querySelectorAll('.step')][1]);
+click([...d.querySelectorAll('.step')][2]);
 for(let i=0;i<20;i++){['Commit','New branch','Merge into main'].forEach(t=>{const b=[...d.querySelectorAll('#demo button')].find(x=>x.textContent===t);if(b&&!b.disabled)click(b)});
  const chips=[...d.querySelectorAll('#demo .chip')];if(chips.length)click(chips[i%chips.length])}
 console.log('git info:',d.querySelector('#demo .readout').textContent);
 console.log('git log:',d.querySelector('#demo .term').textContent.replace(/\n/g,' | '));
 // venv scenario
-click([...d.querySelectorAll('.step')][0]);
+click([...d.querySelectorAll('.step')][1]);
 const btn=t=>[...d.querySelectorAll('#demo button')].find(x=>x.textContent===t);
 click(btn('Install Project A'));click(btn('Install Project B'));
 console.log('shared:',[...d.querySelectorAll('.pkg .st')].map(x=>x.textContent).join(' || '));
 click([...d.querySelectorAll('#demo .chip')][1]);click(btn('Install Project A'));click(btn('Install Project B'));
 console.log('isolated:',[...d.querySelectorAll('.pkg .st')].map(x=>x.textContent).join(' || '));
 // gpu readout
-click([...d.querySelectorAll('.step')][2]);console.log('gpu:',d.querySelector('#demo .readout').textContent.replace(/\n/g,' | '));
+click([...d.querySelectorAll('.step')][3]);console.log('gpu:',d.querySelector('#demo .readout').textContent.replace(/\n/g,' | '));
 // vectors readout
-click([...d.querySelectorAll('.step')][3]);click([...d.querySelectorAll('#demo button')].find(x=>x.textContent==='Perpendicular'));console.log('vectors:',d.querySelector('#demo .readout').textContent.replace(/\n/g,' | '));
+click([...d.querySelectorAll('.step')][4]);click([...d.querySelectorAll('#demo button')].find(x=>x.textContent==='Perpendicular'));console.log('vectors:',d.querySelector('#demo .readout').textContent.replace(/\n/g,' | '));
 // gd divergence
-click([...d.querySelectorAll('.step')][5]);const lr=d.querySelector('#glr');lr.value='1.05';lr.dispatchEvent(new w.Event('input',{bubbles:true}));click(btn('Take 10 steps'));console.log('gd:',d.querySelector('#demo .readout').textContent);
+click([...d.querySelectorAll('.step')][6]);const lr=d.querySelector('#glr');lr.value='1.05';lr.dispatchEvent(new w.Event('input',{bubbles:true}));click(btn('Take 10 steps'));console.log('gd:',d.querySelector('#demo .readout').textContent);
 console.log('canvas draw calls:',calls,'| ERRORS:',errs.length?errs:'none');
