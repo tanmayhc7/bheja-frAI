@@ -1,27 +1,27 @@
 <title>AI From Scratch</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=DM+Mono:wght@400;500&family=Figtree:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
 /* Layout: a lesson path grouped by phase on the left, one lesson panel on the right (stacked on phones), then a phase map and a start guide. */
 :root{
-  --bg:#F4F2FB; --surface:#FFFFFF; --well:#EFECF9; --ink:#1A1538; --ink2:#59557E; --line:#DAD6EE;
-  --accent:#5A3CF0; --accent-deep:#3F27B8; --on-accent:#FFFFFF; --accent-soft:#E6E1FF;
-  --go:#0B8A66; --go-soft:#D9F3E9; --bad:#C92F3B; --bad-soft:#FCE4E6; --xp:#9A5F00; --xp-soft:#FFEFC2;
-  --f-display:'Bricolage Grotesque','Avenir Next','Segoe UI',system-ui,sans-serif;
-  --f-body:'Figtree','Avenir Next','Segoe UI',system-ui,sans-serif;
-  --f-mono:'DM Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  --bg:#EAF3F1; --surface:#FFFFFF; --well:#DFEDEA; --ink:#0C2B30; --ink2:#46666A; --line:#C3DBD6;
+  --accent:#0B7A8A; --accent-deep:#085965; --on-accent:#FFFFFF; --accent-soft:#C9E8E6;
+  --go:#3F7D1F; --go-soft:#E0F0D2; --bad:#C92F3B; --bad-soft:#FCE4E6; --xp:#9A5F00; --xp-soft:#FFEFC2;
+  --f-display:'Fraunces',Georgia,'Times New Roman',serif;
+  --f-body:'Instrument Sans','Avenir Next','Segoe UI',system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --bg:#12102A; --surface:#1C1A3B; --well:#252250; --ink:#EEECFF; --ink2:#ABA7D8; --line:#332F63;
-    --accent:#8E7DFF; --accent-deep:#5848C4; --on-accent:#120F2E; --accent-soft:#2E2A63;
-    --go:#3DD6A7; --go-soft:#12392F; --bad:#FF7F88; --bad-soft:#4A1F27; --xp:#FFC95C; --xp-soft:#3D3212; color-scheme:dark;
+    --bg:#0A1F22; --surface:#112C30; --well:#173A3E; --ink:#E4F5F3; --ink2:#9CC4C4; --line:#245056;
+    --accent:#3CC4D0; --accent-deep:#1B8F9B; --on-accent:#04222A; --accent-soft:#14464C;
+    --go:#A3DB6B; --go-soft:#26401A; --bad:#FF7F88; --bad-soft:#4A1F27; --xp:#FFC95C; --xp-soft:#3D3212; color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#12102A; --surface:#1C1A3B; --well:#252250; --ink:#EEECFF; --ink2:#ABA7D8; --line:#332F63;
-  --accent:#8E7DFF; --accent-deep:#5848C4; --on-accent:#120F2E; --accent-soft:#2E2A63;
-  --go:#3DD6A7; --go-soft:#12392F; --bad:#FF7F88; --bad-soft:#4A1F27; --xp:#FFC95C; --xp-soft:#3D3212; color-scheme:dark;
+  --bg:#0A1F22; --surface:#112C30; --well:#173A3E; --ink:#E4F5F3; --ink2:#9CC4C4; --line:#245056;
+  --accent:#3CC4D0; --accent-deep:#1B8F9B; --on-accent:#04222A; --accent-soft:#14464C;
+  --go:#A3DB6B; --go-soft:#26401A; --bad:#FF7F88; --bad-soft:#4A1F27; --xp:#FFC95C; --xp-soft:#3D3212; color-scheme:dark;
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:400 16px/1.6 var(--f-body);padding-block:12px 48px;
@@ -145,7 +145,7 @@ tr:last-child td{border-bottom:0}
 .foot{font-size:.875rem;color:var(--ink2);max-width:68ch}
 .watch{background:var(--well);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .watch canvas{display:block;width:100%;background:var(--surface);border-radius:10px}
-.watch video{display:block;width:100%;aspect-ratio:16/9;border-radius:10px;background:#1A1538}
+.watch video{display:block;width:100%;aspect-ratio:16/9;border-radius:10px;background:#0C2B30}
 .say{font-weight:600;min-height:3em}
 .player{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .player input[type=range]{flex:1 1 140px;min-width:120px;accent-color:var(--accent);min-height:28px}
