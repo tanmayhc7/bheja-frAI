@@ -143,6 +143,14 @@ tr:last-child td{border-bottom:0}
 .way h3{font-size:1.0625rem}
 .way p{font-size:.9375rem;color:var(--ink2)}
 .foot{font-size:.875rem;color:var(--ink2);max-width:68ch}
+.watch{background:var(--well);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.watch canvas{display:block;width:100%;background:var(--surface);border-radius:10px}
+.watch video{display:block;width:100%;aspect-ratio:16/9;border-radius:10px;background:#1A1538}
+.say{font-weight:600;min-height:3em}
+.player{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.player input[type=range]{flex:1 1 140px;min-width:120px;accent-color:var(--accent);min-height:28px}
+.player .count{font:500 13px var(--f-mono);color:var(--ink2);white-space:nowrap}
+.cmdline{font:500 13px var(--f-mono);color:var(--ink2);min-height:1.6em;overflow-wrap:anywhere}
 @media (max-width:820px){
   .app{grid-template-columns:minmax(0,1fr)}
   .path{flex-direction:row;overflow-x:auto;padding-bottom:6px;align-items:stretch}
@@ -170,7 +178,7 @@ tr:last-child td{border-bottom:0}
 
   <section class="intro">
     <h1>Learn the ideas behind AI by moving them around</h1>
-    <p>Phases 0 and 1 are open: set up your tools, then learn the math under every model. Each lesson has something to drag, click or step through, then two questions. The material follows the open-source course <a href="https://github.com/rohitg00/ai-engineering-from-scratch" target="_blank" rel="noopener">AI Engineering from Scratch</a>, and more phases will be added to this page.</p>
+    <p>Phases 0 and 1 are open: set up your tools, then learn the math under every model. Each lesson has a short animation or video, something to drag or click, then two questions. The material follows the open-source course <a href="https://github.com/rohitg00/ai-engineering-from-scratch" target="_blank" rel="noopener">AI Engineering from Scratch</a>, and more phases will be added to this page.</p>
     <div class="facts">
       <span>Free and MIT licensed course</span>
       <span>542 lessons across 20 phases</span>
@@ -239,7 +247,8 @@ python3 phases/01-math-foundations/01-linear-algebra-intuition/code/vectors.py</
   1. Write a demo:      DEMOS.myDemo = function(host){ ... host.append(...) };
   2. Register a lesson: lesson(2, { id, short, title, tag, lead, demo:'myDemo', takeaway, quiz:[{q,o,a,why,hint}], links:[[label,url]], cmds:[[note,code]] });
      The first argument is the phase number (0 to 19). Ids must be unique and never change, because progress is saved by id.
-  3. Nothing else. The path, counters, phase map and quiz pick the lesson up on their own.
+  3. Optional: add watch:{kind:'steps',id:'x'} (define WATCH.x with steps and a draw function) or watch:{kind:'video',src:'media/x.mp4',cap:'...'} to a lesson.
+  4. Nothing else. The path, counters, phase map and quiz pick the lesson up on their own.
 */
 (function(){
 'use strict';
@@ -318,6 +327,38 @@ function copyText(id,btn){
 }
 function codeBox(id,text){var btn=h('button',{class:'btn ghost small',type:'button',text:'Copy',onclick:function(){copyText(id,btn)}});return h('div',{class:'code'},h('code',{id:id,text:text}),btn)}
 
+
+/* ---------- watch: step-through player and video ---------- */
+var WATCH={};
+var reduce=false;try{reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){}
+var raf=window.requestAnimationFrame?function(f){return window.requestAnimationFrame(f)}:function(f){return setTimeout(function(){f(Date.now())},16)};
+function ease(x){x=clamp(x,0,1);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2}
+function lerp(a,b,t){return a+(b-a)*t}
+function stepper(host,def){
+  var n=def.steps.length,i=0,t=1,playing=false,timer=0,run=0;
+  var c=canvas(host,def.height||250,def.label);
+  var say=h('p',{class:'say',role:'status','aria-live':'polite'}),cmd=h('div',{class:'cmdline'}),count=h('span',{class:'count'});
+  var scrub=h('input',{type:'range',min:0,max:n-1,step:1,value:0,'aria-label':'Step'});
+  var bBack=h('button',{class:'btn ghost small',type:'button',text:'Back'}),bPlay=h('button',{class:'btn small',type:'button',text:'Play'}),bNext=h('button',{class:'btn ghost small',type:'button',text:'Next'});
+  function draw(){var r=prep(c);if(!r)return;r.g.clearRect(0,0,r.w,r.h);def.draw(r.g,r.w,r.h,i,ease(t))}
+  function alive(){return document.body.contains(c)}
+  function anim(){var id=++run;if(reduce){t=1;draw();return}t=0;var t0=0;
+    (function tick(now){if(id!==run||!alive())return;if(!t0)t0=now;t=clamp((now-t0)/(def.ms||800),0,1);draw();if(t<1)raf(tick)})(0)}
+  function show(k,animate){i=clamp(k,0,n-1);scrub.value=i;say.textContent=def.steps[i].say;cmd.textContent=def.steps[i].cmd?'$ '+def.steps[i].cmd:'';
+    count.textContent='Step '+(i+1)+' of '+n;bBack.disabled=i===0;bNext.disabled=i===n-1;label();if(animate)anim();else{run++;t=1;draw()}}
+  function label(){bPlay.textContent=playing?'Pause':(i===n-1?'Replay':'Play')}
+  function stop(){playing=false;clearTimeout(timer);label()}
+  function schedule(){clearTimeout(timer);timer=setTimeout(function(){if(!playing||!alive())return;if(i<n-1){show(i+1,true);if(i<n-1)schedule();else stop()}else stop()},def.hold||2800)}
+  bPlay.addEventListener('click',function(){if(playing){stop();return}if(i===n-1)show(0,true);playing=true;label();schedule()});
+  bBack.addEventListener('click',function(){stop();show(i-1,true)});
+  bNext.addEventListener('click',function(){stop();show(i+1,true)});
+  scrub.addEventListener('input',function(){stop();show(+scrub.value,true)});
+  redraws.push(draw);
+  host.append(c,say);if(def.steps.some(function(s){return s.cmd}))host.append(cmd);host.append(h('div',{class:'player'},bBack,bPlay,bNext,scrub,count));
+  show(0,false);
+}
+function chipAt(g,x,y,txt,a,fill,col,font){g.globalAlpha=a;g.font=font;var m=g.measureText(txt),w=((m&&m.width)||txt.length*7)+16;g.fillStyle=fill;g.beginPath();if(g.roundRect)g.roundRect(x,y-13,w,26,8);else g.rect(x,y-13,w,26);g.fill();g.fillStyle=col;g.textAlign='left';g.textBaseline='middle';g.fillText(txt,x+8,y+1);g.globalAlpha=1;return w}
+
 /* ================= PHASE 0 DEMOS ================= */
 
 /* Python environments */
@@ -348,8 +389,7 @@ DEMOS.venv=function(host){
       h('button',{class:'btn ghost',type:'button',text:'Start over',onclick:function(){reset();render()}}));
   }
   reset();
-  host.append(h('p',{class:'note',text:'Two projects need different versions of the same package. Install A, then B, and see what happens in each setup.'}),modes,pk,btns,term,
-    h('p',{class:'note',text:'The version numbers are examples. The commands are the standard Python ones.'}));
+  host.append(h('p',{class:'note',text:'Install A, then B, in each setup. The version numbers are examples.'}),modes,pk,btns,term);
   render();
 };
 
@@ -392,7 +432,7 @@ DEMOS.git=function(host){
     draw();
   }
   reset();
-  host.append(c,info,ctrl,term,h('p',{class:'note',text:'Each dot is a commit. Make a branch, commit on it, then merge it into main. The demo always makes a merge commit (git merge --no-ff) so the branch stays visible. The ring marks where HEAD, your current position, points.'}));
+  host.append(c,info,ctrl,term,h('p',{class:'note',text:'Make a branch, commit on it, then merge. The ring marks HEAD, your current position.'}));
   ui();
 };
 
@@ -409,9 +449,9 @@ DEMOS.gpu=function(host){
     rows.forEach(function(r){var s=Math.ceil(N/r.w);r.fill.style.width=(s/N*100)+'%';r.p.textContent=s+' steps';r.row.className='brow'+(r.w===w?' sel':'')});
   }
   var sl=ctl('gpuw','Parallel workers',0,4,1,idx,function(v){return String(OPT[v])},function(v){idx=v;render()});
-  host.append(h('p',{class:'note',text:'The job: process 256 items. Every worker finishes one item per step. The highlighted squares are what gets done in the first step.'}),
+  host.append(h('p',{class:'note',text:'The job: 256 items. Each worker finishes one item per step.'}),
     sl.row,cells,read,h('h3',{text:'Steps needed for each setup'}),bars,
-    h('p',{class:'note',text:'A CPU has a handful of strong workers. A GPU has thousands of simpler ones, so jobs made of many independent pieces finish in far fewer steps. Real hardware has overheads this demo ignores.'}));
+    h('p',{class:'note',text:'Real hardware has overheads this demo ignores.'}));
   render();
 };
 
@@ -446,7 +486,7 @@ DEMOS.vectors=function(host){
     h('button',{class:'btn ghost',type:'button',text:'Same direction',onclick:function(){preset(0)}}),
     h('button',{class:'btn ghost',type:'button',text:'Perpendicular',onclick:function(){preset(90)}}),
     h('button',{class:'btn ghost',type:'button',text:'Opposite',onclick:function(){preset(180)}})),
-    h('p',{class:'note',text:'Here a vector is an arrow with two numbers. Models use the same idea with hundreds of numbers per word or image, and compare them with exactly this calculation.'}));
+    h('p',{class:'note',text:'Models use the same calculation with hundreds of numbers per word or image.'}));
   draw();
 };
 
@@ -474,7 +514,7 @@ DEMOS.neuron=function(host){
   host.append(cards,
     h('div',{class:'ncard'},ctl('nb','Bias',-1.5,1.5,0.1,b,f2,function(v){b=v;upd()}).row),
     eq,z,h('div',{class:'meter',role:'img','aria-label':'Umbrella score meter'},fill),verdict,
-    h('p',{class:'note',text:'Each input is multiplied by its weight, the products and the bias are added, and ReLU turns any negative total into zero.'}));
+    h('p',{class:'note',text:'Try making the total negative and watch ReLU clip it to zero.'}));
   upd();
 };
 
@@ -510,53 +550,141 @@ DEMOS.gd=function(host){
     h('button',{class:'btn',type:'button',text:'Take 1 step',onclick:function(){step();draw()}}),
     h('button',{class:'btn',type:'button',text:'Take 10 steps',onclick:function(){for(var i=0;i<10;i++)step();draw()}}),
     h('button',{class:'btn ghost',type:'button',text:'Start over',onclick:function(){reset();draw()}})),
-    h('p',{class:'note',text:'The loss here is (w - 2) squared, so the best weight is 2. Each step moves w by learning rate times gradient, in the downhill direction. Changing a slider restarts the run.'}));
+    h('p',{class:'note',text:'Changing a slider restarts the run. Try a rate above 1.'}));
   draw();
 };
+
+
+/* ================= WATCH: step-through animations ================= */
+WATCH.git={label:'An animated commit graph: a branch is created, gets a commit, and is merged back into main.',height:230,hold:3000,steps:[
+ {say:'A repository starts with one commit on main.',cmd:'git commit -m "start"'},
+ {say:'Each commit is a snapshot that points back to the one before it.',cmd:'git commit -m "loader"'},
+ {say:'A branch is a new label. You can try an idea without touching main.',cmd:'git switch -c idea'},
+ {say:'Commits on the branch leave main exactly as it was.',cmd:'git commit -m "new rate"'},
+ {say:'Meanwhile main can keep moving on its own.',cmd:'git switch main && git commit -m "readme"'},
+ {say:'A merge joins the two lines with one commit that has two parents.',cmd:'git merge --no-ff idea'},
+ {say:'Main now has both pieces of work. The idea branch can be deleted.',cmd:'git branch -d idea'}],
+ draw:function(g,W,H,i,t){
+  var pl=26,step=Math.max(44,Math.min(110,(W-pl*2-96)/3)),ink=css('--ink'),acc=css('--accent'),go=css('--go'),surf=css('--surface'),ink2=css('--ink2'),mono=css('--f-mono');
+  function X(c){return pl+c*step}var Y0=H*.3,Y1=H*.72;function Y(l){return l?Y1:Y0}
+  var N=[{c:0,l:0,a:0,m:'start',p:[]},{c:1,l:0,a:1,m:'loader',p:[0]},{c:2,l:1,a:3,m:'new rate',p:[1]},{c:2,l:0,a:4,m:'readme',p:[1]},{c:3,l:0,a:5,m:'merge',p:[3,2]}];
+  function al(a){return i>a?1:i===a?t:0}
+  g.lineWidth=3;g.lineCap='round';
+  if(i===2){g.setLineDash([5,5]);g.strokeStyle=acc;g.globalAlpha=t;g.beginPath();g.moveTo(X(1),Y0);g.lineTo(X(1),lerp(Y0,Y1,t));g.stroke();g.setLineDash([]);g.globalAlpha=1}
+  N.forEach(function(n){var A=al(n.a);if(A<=0)return;n.p.forEach(function(pi){var q=N[pi];g.strokeStyle=(n.l===1||q.l===1)?acc:ink;g.beginPath();g.moveTo(X(q.c),Y(q.l));g.lineTo(lerp(X(q.c),X(n.c),A),lerp(Y(q.l),Y(n.l),A));g.stroke()})});
+  N.forEach(function(n){var A=al(n.a);if(A<=0)return;var col=n.l===1?acc:(n.m==='merge'?go:ink);g.fillStyle=col;g.strokeStyle=surf;g.lineWidth=3;g.beginPath();g.arc(X(n.c),Y(n.l),9*(.4+.6*A),0,6.2832);g.fill();g.stroke();
+   g.font='500 11px '+mono;g.fillStyle=ink2;g.globalAlpha=A;g.textBaseline='middle';if(n.l){g.textAlign='left';g.fillText(n.m,X(n.c)+15,Y(n.l))}else{g.textAlign='center';g.fillText(n.m,X(n.c),Y(n.l)+22)}g.globalAlpha=1});
+  var mainC=i===0?0:i<4?1:i===4?lerp(1,2,t):i===5?lerp(2,3,t):3;
+  var w1=chipAt(g,0,-99,'main',0,'#000','#000','600 12px '+mono);
+  chipAt(g,X(mainC)-w1/2,Y0-26,'main',1,ink,surf,'600 12px '+mono);
+  if(i>=2){var ic=i===2?1:i===3?lerp(1,2,t):2,w2=chipAt(g,0,-99,'idea',0,'#000','#000','600 12px '+mono);chipAt(g,X(ic)-w2/2,Y1+28,'idea',i>=6?.4:(i===2?t:1),acc,css('--on-accent'),'600 12px '+mono)}
+  if(i===6){g.strokeStyle=go;g.lineWidth=2.5;g.globalAlpha=t;g.beginPath();g.arc(X(3),Y0,16,0,6.2832);g.stroke();g.globalAlpha=1}
+ }};
+
+WATCH.neuron={label:'An animated weighted sum: three inputs are multiplied by weights, added, shifted by a bias and passed through ReLU.',height:250,hold:3000,steps:[
+ {say:'A neuron takes some numbers. Here: cloud cover, humidity and wind.'},
+ {say:'Each input has a weight that says how much it matters. Wind has a negative one.'},
+ {say:'Multiply every input by its weight.'},
+ {say:'Add the three products: 0.96 + 0.48 - 0.08 = 1.36.'},
+ {say:'Add the bias, a built-in nudge: 1.36 - 0.90 = 0.46.'},
+ {say:'ReLU turns a negative total into 0 and keeps a positive one. 0.46 stays, so the score is 0.46.'}],
+ draw:function(g,W,H,i,t){
+  var ink=css('--ink'),ink2=css('--ink2'),acc=css('--accent'),go=css('--go'),bad=css('--bad'),surf=css('--surface'),well=css('--well'),mono=css('--f-mono'),body=css('--f-body');
+  var names=['Cloud','Humidity','Wind'],x=[.8,.6,.2],w=[1.2,.8,-.4],pr=[.96,.48,-.08],ys=[H*.22,H*.5,H*.78];
+  function al(a){return i>a?1:i===a?t:0}
+  var nar=W<460,c0=6,c1=nar?W*.37:Math.max(c0+112,W*.4),c2=nar?W*.63:W*.665,c3=W-34;
+  g.textBaseline='middle';g.textAlign='center';g.font='500 11px '+mono;g.fillStyle=ink2;
+  g.globalAlpha=al(0);g.fillText('inputs',c0+48,12);g.globalAlpha=al(1);g.fillText('weights',c1+(nar?16:22),12);g.globalAlpha=al(2);g.fillText('products',c2,12);g.globalAlpha=al(3);g.fillText('total',c3,12);g.globalAlpha=1;
+  for(var k=0;k<3;k++){
+    chipAt(g,c0,ys[k],names[k]+' '+x[k].toFixed(2),al(0),well,ink,'500 12px '+body);
+    var A1=al(1);if(A1>0){g.globalAlpha=A1;g.strokeStyle=ink2;g.lineWidth=1.5;g.beginPath();g.moveTo(c0+98,ys[k]);g.lineTo(c1-4,ys[k]);g.stroke();g.globalAlpha=1;
+      g.font='600 '+(nar?12:14)+'px '+mono;g.fillStyle=w[k]<0?bad:acc;g.globalAlpha=A1;g.textAlign='left';g.fillText(nar?'x'+w[k].toFixed(2):'x '+(w[k]<0?'':' ')+w[k].toFixed(2),c1,ys[k]);g.globalAlpha=1}
+    var A2=al(2);if(A2>0){g.globalAlpha=A2;g.font='600 '+(nar?13:15)+'px '+mono;g.fillStyle=pr[k]<0?bad:ink;g.textAlign='center';g.fillText((pr[k]<0?'':'+')+(pr[k]*A2).toFixed(2),c2,ys[k]);g.globalAlpha=1}
+    var A3=al(3);if(A3>0){g.globalAlpha=A3;g.strokeStyle=ink2;g.lineWidth=1.5;g.beginPath();g.moveTo(c2+22,ys[k]);g.lineTo(c3-26,H*.5);g.stroke();g.globalAlpha=1}
+  }
+  var A3=al(3);if(A3>0){g.globalAlpha=A3;g.fillStyle=well;g.strokeStyle=i>=5?go:acc;g.lineWidth=2.5;g.beginPath();g.roundRect?g.roundRect(c3-26,H*.5-24,52,48,10):g.rect(c3-26,H*.5-24,52,48);g.fill();g.stroke();g.globalAlpha=1}
+  if(i>=3){var v=i===3?1.36*t:i===4?lerp(1.36,.46,t):.46;g.font='600 16px '+mono;g.fillStyle=i>=5?go:ink;g.textAlign='center';g.fillText(v.toFixed(2),c3,H*.5)}
+  var A4=al(4);if(A4>0){g.globalAlpha=A4;chipAt(g,W-94,H*.34,'bias -0.90',A4,well,bad,'500 12px '+mono);g.strokeStyle=ink2;g.lineWidth=1.5;g.beginPath();g.moveTo(c3,H*.34+14);g.lineTo(c3,H*.5-24);g.stroke();g.globalAlpha=1}
+  var A5=al(5);if(A5>0){g.globalAlpha=A5;g.font='500 12px '+mono;g.fillStyle=ink2;g.textAlign='right';g.fillText('after ReLU',W-4,H*.5+40);g.textAlign='center';g.font='600 16px '+mono;g.fillStyle=go;g.fillText('0.46',c3,H*.5+60);g.globalAlpha=1}
+ }};
+
+WATCH.gd={label:'An animated curve of the loss (w minus 2) squared with a dot taking gradient descent steps, then a too-large learning rate overshooting.',height:260,ms:900,hold:3200,steps:[
+ {say:'The loss measures error. Here it is (w - 2) squared, so the best weight is 2.'},
+ {say:'Start anywhere. Say w = -1, where the loss is 9.'},
+ {say:'The slope there is -6. It points uphill, so downhill is to the right.'},
+ {say:'Step = learning rate 0.2 x slope. The dot moves from -1 to 0.2.'},
+ {say:'The slope is gentler now (-3.6), so the next step is smaller: w = 0.92.'},
+ {say:'Steps keep shrinking as the slope flattens, and w settles at 2.'},
+ {say:'A learning rate that is too big overshoots. At 1.05 every step lands farther away.'}],
+ draw:function(g,W,H,i,t){
+  var pl=34,pr=14,pt=14,pb=26,ink=css('--ink'),ink2=css('--ink2'),acc=css('--accent'),go=css('--go'),badc=css('--bad'),line=css('--line'),mono=css('--f-mono');
+  function X(v){return pl+(v+2)/8*(W-pl-pr)}function Y(l){return H-pb-l/18*(H-pt-pb)}function Lo(w){return (w-2)*(w-2)}
+  g.lineWidth=1;g.font='12px '+mono;g.textBaseline='middle';g.textAlign='right';
+  for(var l=0;l<=18;l+=6){g.strokeStyle=line;g.beginPath();g.moveTo(pl,Y(l));g.lineTo(W-pr,Y(l));g.stroke();g.fillStyle=ink2;g.fillText(String(l),pl-6,Y(l))}
+  g.textAlign='center';for(var v=-2;v<=6;v+=2){g.fillStyle=ink2;g.fillText(String(v),X(v),H-pb+13)}
+  g.setLineDash([4,3]);g.strokeStyle=go;g.beginPath();g.moveTo(X(2),pt+22);g.lineTo(X(2),H-pb);g.stroke();g.setLineDash([]);
+  g.strokeStyle=ink;g.lineWidth=2.5;g.beginPath();for(var px=0;px<=W-pl-pr;px+=2){var wv=-2+px/(W-pl-pr)*8,yy=Y(Lo(wv));if(px===0)g.moveTo(pl+px,yy);else g.lineTo(pl+px,yy)}g.stroke();
+  var good=[-1],w=-1;for(var k=0;k<8;k++){w=w-.4*(w-2);good.push(w)}
+  var over=[-1,5.3,-1.63,5.993];
+  function dot(wv,col,r){g.fillStyle=col;g.beginPath();g.arc(X(wv),Y(Lo(wv)),r,0,6.2832);g.fill()}
+  function trail(arr,upto,col,alpha){g.globalAlpha=alpha;g.strokeStyle=col;g.lineWidth=2;g.beginPath();var n=Math.floor(upto);for(var q=0;q<=n&&q<arr.length;q++){var xx=X(arr[q]),yy=Y(Lo(arr[q]));if(q===0)g.moveTo(xx,yy);else g.lineTo(xx,yy)}
+    if(n<arr.length-1){var f=upto-n,a=arr[n],b=arr[n+1];g.lineTo(lerp(X(a),X(b),f),lerp(Y(Lo(a)),Y(Lo(b)),f))}g.stroke();
+    for(var q=0;q<=n&&q<arr.length;q++)dot(arr[q],col,q===n?6:4);g.globalAlpha=1}
+  var read='',cur=0;
+  g.textAlign='center';g.font='600 13px '+mono;
+  if(i===0){g.fillStyle=go;g.fillText('best w = 2, loss 0',X(2),pt+8)}
+  if(i===1||i===2){g.globalAlpha=i===1?t:1;dot(-1,acc,7);g.globalAlpha=1;read='w = -1   loss = 9'}
+  if(i===2){var ax=X(-1),ay=Y(9)-14;g.globalAlpha=t;g.strokeStyle=acc;g.fillStyle=acc;g.lineWidth=3;g.beginPath();g.moveTo(ax,ay);g.lineTo(ax+54*t,ay);g.stroke();g.beginPath();g.moveTo(ax+54*t+9,ay);g.lineTo(ax+54*t-2,ay-6);g.lineTo(ax+54*t-2,ay+6);g.fill();g.textAlign='left';g.font='600 12px '+mono;g.fillText('slope -6: go right',ax+8,ay-14);g.globalAlpha=1;g.textAlign='center'}
+  if(i===3){var pw=lerp(-1,good[1],t);trail(good,t,acc,1);dot(pw,acc,7);read='w = '+pw.toFixed(2)+'   loss = '+Lo(pw).toFixed(2)}
+  if(i===4){var pw2=lerp(good[1],good[2],t);trail(good,1+t,acc,1);dot(pw2,acc,7);read='w = '+pw2.toFixed(2)+'   loss = '+Lo(pw2).toFixed(2)}
+  if(i===5){var up=2+t*6;trail(good,up,acc,1);var cw=lerp(good[Math.floor(up)],good[Math.min(good.length-1,Math.floor(up)+1)],up-Math.floor(up));dot(cw,acc,7);read='w = '+cw.toFixed(2)+'   loss = '+Lo(cw).toFixed(2)}
+  if(i===6){trail(good,8,acc,.3);var uo=t*3;trail(over,uo,badc,1);var oc=Math.floor(uo);read='learning rate 1.05: w jumps to '+over[Math.min(3,Math.floor(uo+.001)+(uo-oc>0?1:0))].toFixed(2)}
+  g.fillStyle=i===6?badc:ink;g.font='600 '+(W<420?11:12)+'px '+mono;g.textAlign='center';if(read)g.fillText(read,Math.min(W-pr-g.measureText(read).width/2,Math.max(pl+g.measureText(read).width/2,X(2))),pt+8);
+ }};
 
 /* ================= LESSONS ================= */
 var P0=REPO+'/tree/main/phases/00-setup-and-tooling/',P1=REPO+'/tree/main/phases/01-math-foundations/';
 
 lesson(0,{id:'envs',short:'Python environments',title:'Every project gets its own packages',tag:'Behind Phase 0, lesson 6: Python Environments',
-  lead:'Python projects depend on packages, and different projects often need different versions of the same package. If everything installs into one shared Python, the last install wins and an older project can break. A virtual environment is a private folder of packages that belongs to one project.',
-  demo:'venv',takeaway:'Make one environment per project and most version clashes never happen.',
+  lead:'Different projects often need different versions of the same package. A virtual environment is a private folder of packages for one project, so an install in one project cannot break another.',
+  watch:{kind:'video',src:'media/environments.mp4',cap:'18 seconds, no sound. Captions are on screen.'},demo:'venv',takeaway:'Make one environment per project and most version clashes never happen.',
   quiz:[{q:'With one shared Python, you install Project A and then Project B. What happens to Project A?',o:['It breaks, because the shared numpy changed to 2.1','Nothing, both versions can coexist','It gets faster'],a:0,why:'A shared Python holds one version of each package, so the last install wins.',hint:'Try it with the shared setup selected.'},
         {q:'What does a virtual environment give a project?',o:['Its own private set of installed packages','A faster CPU','A copy of the operating system'],a:0,why:'It is a folder with its own packages, so projects cannot overwrite each other.',hint:'Switch to separate environments and install both again.'}],
   cmds:[['In the repo, this script checks your setup and says what to fix. Run it from the repo root after cloning.','python3 phases/00-setup-and-tooling/01-dev-environment/code/verify.py --route beginner']],
   links:[['Python environments',P0+'06-python-environments'],['Dev environment',P0+'01-dev-environment']]});
 
 lesson(0,{id:'git',short:'Git: save points',title:'Git keeps save points for your code',tag:'Behind Phase 0, lesson 2: Git and Collaboration',
-  lead:'Git records a project as a chain of snapshots called commits. A branch is a movable label on one of those commits, so you can try an idea without disturbing the main line and merge it back once it works. The course itself is a Git repository, so you will use this from the first day.',
-  demo:'git',takeaway:'Commit small and often. A branch lets you experiment, and main stays safe until you decide to merge.',
+  lead:'Git saves your project as a chain of snapshots called commits. A branch lets you try an idea without touching the main line, then merge it back once it works.',
+  watch:{kind:'steps',id:'git'},demo:'git',takeaway:'Commit small and often. A branch lets you experiment, and main stays safe until you decide to merge.',
   quiz:[{q:'What is a commit?',o:['A saved snapshot of your project with a message','A copy of your code on a server','A new branch'],a:0,why:'Each commit is a snapshot plus a message, linked to the commit before it.',hint:'Press Commit and read the command in the log.'},
         {q:'Why work on a branch?',o:['You can try an idea without touching main, then merge it if it works','Branches make code run faster','Main cannot be changed otherwise'],a:0,why:'Branches isolate experiments. Merging brings the good ones back.',hint:'Make a branch, commit on it, and watch main.'}],
   links:[['Git and collaboration',P0+'02-git-and-collaboration']]});
 
 lesson(0,{id:'gpus',short:'Why GPUs?',title:'AI runs on GPUs because the work splits up',tag:'Behind Phase 0, lesson 3: GPU Setup and Cloud',
-  lead:'Training a model means doing the same small calculation on huge amounts of data. A CPU has a few powerful workers. A GPU has thousands of simpler ones that all work at once. The course covers getting GPU access in this phase, including cloud options.',
-  demo:'gpu',takeaway:'When a job splits into many independent pieces, more workers means fewer steps. Neural network math splits that way.',
+  lead:'Training a model repeats one small calculation on huge amounts of data. A CPU has a few strong workers. A GPU has thousands of simple ones working at once.',
+  watch:{kind:'video',src:'media/gpus.mp4',cap:'20 seconds, no sound. Captions are on screen.'},demo:'gpu',takeaway:'When a job splits into many independent pieces, more workers means fewer steps. Neural network math splits that way.',
   quiz:[{q:'There are 256 items and 64 workers, and each worker finishes one item per step. How many steps?',o:['4','64','256'],a:0,why:'256 divided by 64 is 4.',hint:'Move the slider to 64.'},
         {q:'Why do neural networks suit GPUs?',o:['Their math splits into many independent multiplications and additions','GPUs always have more memory than CPUs','Neural networks only run on GPUs'],a:0,why:'A layer is mostly multiply-and-add on numbers that do not depend on each other, so many can run at once.',hint:'Think of the weighted sum in the next phase.'}],
   links:[['GPU setup and cloud',P0+'03-gpu-setup-and-cloud']]});
 
 lesson(1,{id:'vectors',short:'Vectors and similarity',title:'A vector is a list of numbers you can compare',tag:'Behind Phase 1, lessons 1 and 2: Linear Algebra Intuition, Vectors and Matrices',
-  lead:'A vector is a list of numbers. With two numbers it is an arrow you can draw. With hundreds it describes a word, an image or a user. The dot product multiplies matching entries and adds them up. Divide by the two lengths and you get cosine similarity: 1 means the same direction, 0 means unrelated, and -1 means opposite.',
-  demo:'vectors',takeaway:'Comparing things in AI usually means turning them into vectors and measuring how well their directions line up.',
+  lead:'A vector is a list of numbers. Cosine similarity compares two vectors by direction: 1 means the same way, 0 means unrelated and -1 means opposite.',
+  watch:{kind:'video',src:'media/vectors.mp4',cap:'20 seconds, no sound. Captions are on screen.'},demo:'vectors',takeaway:'Comparing things in AI usually means turning them into vectors and measuring how well their directions line up.',
   quiz:[{q:'Two vectors are perpendicular. What is their dot product?',o:['0','1','-1'],a:0,why:'Perpendicular vectors share no direction, so the matching products cancel to zero.',hint:'Press the Perpendicular button.'},
         {q:'You make vector b twice as long without turning it. What happens to cosine similarity?',o:['It stays the same','It doubles','It becomes 0'],a:0,why:'Cosine similarity divides out the lengths, so only direction matters.',hint:'Drag the length slider and watch the cosine value.'}],
   cmds:[['After cloning the repo, this first math lesson runs with no extra packages.','python3 phases/01-math-foundations/01-linear-algebra-intuition/code/vectors.py']],
   links:[['Linear algebra intuition',P1+'01-linear-algebra-intuition'],['Vectors, matrices and operations',P1+'02-vectors-matrices-operations']]});
 
 lesson(1,{id:'neuron',short:'A weighted sum',title:'A neuron is a weighted sum',tag:'Behind Phase 1 and Phase 3',
-  lead:'Every neural network is built from one small piece. It takes some numbers, multiplies each by a weight, adds the results and a bias, and clips a negative total to zero. The repo\'s first math lesson ends by showing that a matrix times a vector is exactly this operation, run for a whole layer at once.',
-  demo:'neuron',takeaway:'Training a network means searching for weights and biases that give useful outputs. The next lesson shows how that search works.',
+  lead:'A neuron multiplies each input by a weight, adds the results and a bias, and clips a negative total to zero. A whole layer is this done many times at once.',
+  watch:{kind:'steps',id:'neuron'},demo:'neuron',takeaway:'Training a network means searching for weights and biases that give useful outputs. The next lesson shows how that search works.',
   quiz:[{q:'In the demo the wind weight is negative. What does that do?',o:['Higher wind lowers the umbrella score','Wind is ignored','The score is always negative'],a:0,why:'A negative weight makes that input subtract from the total, so more wind pulls the score down.',hint:'Raise Wind speed and watch the total.'},
         {q:'The total before ReLU is -0.7. What does the neuron output?',o:['-0.7','0','0.7'],a:1,why:'ReLU replaces a negative total with 0 and passes a positive total through unchanged.',hint:'ReLU clips negative numbers.'}],
   links:[['Vectors, matrices and operations',P1+'02-vectors-matrices-operations'],['The perceptron (Phase 3)',REPO+'/tree/main/phases/03-deep-learning-core/01-the-perceptron']]});
 
 lesson(1,{id:'gradient-descent',short:'Rolling downhill',title:'Learning is rolling downhill',tag:'Behind Phase 1, lesson 8: Optimization',
-  lead:'Once you can measure error, you need a way to reduce it. Gradient descent checks the slope of the loss where you stand and steps downhill. The learning rate sets the step size. The repo\'s README animates twenty starting points doing this on a quadratic loss, and you can run one here.',
-  demo:'gd',takeaway:'Too small a rate is slow. Too large a rate overshoots. Choosing it well is a big part of training in practice.',
+  lead:'Gradient descent reduces error by stepping downhill on the loss. The learning rate sets the step size.',
+  watch:{kind:'steps',id:'gd'},demo:'gd',takeaway:'Too small a rate is slow. Too large a rate overshoots. Choosing it well is a big part of training in practice.',
   quiz:[{q:'In the demo the learning rate is 1.05. What happens?',o:['Each step overshoots farther and the loss grows','The point lands on the minimum in one step','Nothing, the point stays put'],a:0,why:'On this curve each step multiplies the distance from the minimum by 1 minus 2 times the rate. At 1.05 that factor is -1.1, so the distance grows every step.',hint:'Set the rate to 1.05 and take 10 steps.'},
         {q:'What does the gradient tell you?',o:['Which way is uphill, so you step the opposite way','How many steps are left','The final value of w'],a:0,why:'The gradient points uphill. Descent subtracts it, which moves you downhill.',hint:'Check the sign of the gradient when w is left of the minimum.'}],
   links:[['Optimization: the gradient descent family',P1+'08-optimization'],['Calculus for ML',P1+'04-calculus-for-ml'],['Backpropagation from scratch (Phase 3)',REPO+'/tree/main/phases/03-deep-learning-core/03-backpropagation']]});
@@ -600,6 +728,15 @@ function buildQuiz(i){
   box.append(h('div',{id:'banner'}));
   return box;
 }
+function watchBox(L){
+  var w=L.watch;if(!w)return null;var box=h('div',{class:'watch'});
+  if(w.kind==='video'){
+    var v=h('video',{controls:true,muted:true,playsinline:true,preload:'metadata',src:w.src,'aria-label':'Video: '+L.short});v.muted=true;
+    box.append(v,h('p',{class:'note',text:w.cap}));return {head:h('h3',{text:'Watch'}),box:box};
+  }
+  if(WATCH[w.id]){stepper(box,WATCH[w.id]);return {head:h('h3',{text:'Watch it step by step'}),box:box}}
+  return null;
+}
 function select(i,user){
   cur=i;redraws=[];var L=flat()[i],root=$('#lesson');root.textContent='';
   var demo=h('div',{class:'demo',id:'demo'});
@@ -607,8 +744,9 @@ function select(i,user){
   L.links.forEach(function(l){links.append(h('a',{href:l[1],target:'_blank',rel:'noopener',text:l[0]}))});
   var cmds=null;
   if(L.cmds){cmds=h('div',{class:'cmd'},h('h3',{text:'Run it for real'}));L.cmds.forEach(function(c){cmds.append(h('p',{class:'note',text:c[0]}),codeBox('cmd-'+L.id+'-'+(cmdN++),c[1]))})}
-  root.append(h('p',{class:'tag',text:L.tag}),h('h2',{id:'lesson-title',tabindex:'-1',text:L.title}),h('p',{class:'lead',text:L.lead}),
-    h('h3',{text:'Try it'}),demo,h('p',{class:'takeaway',text:L.takeaway}),buildQuiz(i),cmds,links);
+  var wb=watchBox(L);
+  [h('p',{class:'tag',text:L.tag}),h('h2',{id:'lesson-title',tabindex:'-1',text:L.title}),h('p',{class:'lead',text:L.lead}),
+    wb&&wb.head,wb&&wb.box,h('h3',{text:'Try it'}),demo,h('p',{class:'takeaway',text:L.takeaway}),buildQuiz(i),cmds,links].forEach(function(n){if(n)root.append(n)});
   DEMOS[L.demo](demo);buildPath();
   try{history.replaceState(null,'','#'+L.id)}catch(e){}
   if(user){var t=$('#lesson-title');if(t)t.focus({preventScroll:true});if(window.innerWidth<=820)root.scrollIntoView({block:'start'})}
