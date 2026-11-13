@@ -8,8 +8,12 @@ Each lesson has a short animation or video, a live demo, and a two-question quiz
 
 ## What is open so far
 
-- Phase 0, Setup and Tooling: Python environments, Git, why GPUs.
-- Phase 1, Math Foundations: vectors and similarity, a neuron as a weighted sum, gradient descent.
+- Phase 0, Setup and Tooling: what the repo setup does, Python environments, Git, why GPUs.
+- Phase 1, Math Foundations: vectors and similarity, a neuron as a weighted sum, gradient descent, temperature and top-p, is a change real.
+- Phase 2, ML Fundamentals: precision and recall.
+- Phase 11, LLM Engineering: the context window, search by meaning, chunking, RAG, fast search (HNSW), agentic RAG, hallucinations, JSON output, tool calling, reading failures.
+- Phase 17, Infrastructure and Production: what tokens cost.
+- A glossary of plain-language terms, linked from the lessons.
 - A map of all 20 phases and a "where to start" guide from the source README.
 
 ## Files
