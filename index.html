@@ -125,6 +125,39 @@ p{margin:0;text-wrap:pretty}
 .pf .pass{color:var(--go);font-weight:700}
 .pf .fail{color:var(--bad);font-weight:700}
 .pf .later{color:var(--xp);font-weight:700}
+.bars{display:grid;gap:8px}
+.brow{display:grid;grid-template-columns:84px minmax(0,1fr) 52px;gap:8px;align-items:center;font-size:.9375rem}
+.brow.cut{opacity:.5}
+.btrack{display:block;background:var(--well);border-radius:6px;height:16px;overflow:hidden}
+.bfill{display:block;background:var(--accent);height:100%}
+.bval{text-align:right;font-variant-numeric:tabular-nums}
+.flowrow{display:flex;flex-wrap:wrap;gap:8px}
+.stage{font:500 14px var(--f-body);padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink2)}
+.stage.done{border-color:var(--go);color:var(--ink)}
+.stage.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.items{display:flex;flex-wrap:wrap;gap:8px}
+.item{border:2px solid var(--line);background:var(--surface);border-radius:10px;padding:6px 8px;min-width:62px;text-align:center;font:500 13px/1.4 var(--f-mono)}
+.item.bad{background:var(--bad-soft)}
+.item.good{background:var(--go-soft)}
+.item.flag{border-color:var(--accent);border-style:solid;box-shadow:0 0 0 2px var(--accent)}
+.stack{display:flex;height:30px;border-radius:8px;overflow:hidden;background:var(--well)}
+.stack span{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.875rem}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.rng{position:relative;height:26px;background:var(--well);border-radius:6px}
+.rng .seg{position:absolute;top:6px;height:14px;border-radius:7px;background:var(--accent)}
+.rng .dot{position:absolute;top:3px;width:4px;height:20px;background:var(--ink);border-radius:2px}
+.chunk{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.9375rem;overflow-wrap:anywhere}
+.chunk mark{background:var(--xp-soft);color:var(--ink);border-radius:3px}
+.chunk .n{font:600 12px var(--f-mono);color:var(--ink2);margin-right:6px}
+.tbl{width:100%;max-width:100%;min-width:0;border-collapse:collapse;font-size:.9375rem;table-layout:fixed}
+.tbl td,.tbl th{overflow-wrap:anywhere}
+.tbl th:first-child,.tbl td:first-child{width:56px}
+.tbl th:last-child,.tbl td:last-child{width:64px}
+.tbl td,.tbl th{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.msgs{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:.9375rem}
+textarea.code{width:100%;font:500 13px/1.5 var(--f-mono);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;min-height:150px}
+select.sel{font:500 14px var(--f-body);padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);min-height:40px;max-width:100%}
 .fa{background:var(--well);border-radius:14px;padding:4px 16px}
 .fa summary{cursor:pointer;font-weight:600;padding:12px 0;min-height:44px;display:flex;align-items:center}
 .fstep{border-top:1px solid var(--line);padding:14px 0;display:grid;gap:10px;min-width:0}
@@ -203,7 +236,7 @@ tr:last-child td{border-bottom:0}
 
   <section class="intro">
     <h1>Learn the ideas behind AI by moving them around</h1>
-    <p>Phases 0 and 1 are open: set up your tools, then learn the math under every model. Most lessons have a short animation or video, and all have something to drag or click, then two questions. The material follows the open-source course <a href="https://github.com/rohitg00/ai-engineering-from-scratch" target="_blank" rel="noopener">AI Engineering from Scratch</a>, and more phases will be added to this page.</p>
+    <p>Open now: set up your tools, learn the little math you need, then build with language models (search, RAG, tool calling, testing and cost). Most lessons have a short animation or video, and all have something to drag or click, then two questions. The material follows the open-source course <a href="https://github.com/rohitg00/ai-engineering-from-scratch" target="_blank" rel="noopener">AI Engineering from Scratch</a>, and more phases will be added to this page.</p>
     <div class="facts">
       <span>Free and MIT licensed course</span>
       <span>542 lessons across 20 phases</span>
@@ -641,6 +674,251 @@ DEMOS.gd=function(host){
 };
 
 
+/* ================= MORE DEMOS (simple, one idea each) ================= */
+function bars(host){var box=h('div',{class:'bars'});host.append(box);
+  return {set:function(rows){box.textContent='';rows.forEach(function(r){var f=h('span',{class:'bfill'});f.style.width=clamp(r.pct,0,100)+'%';
+    box.append(h('div',{class:'brow'+(r.cut?' cut':'')},h('span',{text:r.label}),h('span',{class:'btrack'},f),h('span',{class:'bval',text:r.val})))})}}}
+function flow(host,def){
+  var i=0,N=def.steps.length,row=h('div',{class:'flowrow',role:'list'});
+  var chips=def.stages.map(function(s){var c=h('span',{class:'stage',role:'listitem',text:s});row.append(c);return c});
+  var say=h('p',{class:'result','aria-live':'polite'}),box=h('pre',{class:'pf'}),cnt=h('span',{class:'note'});
+  var back=h('button',{class:'btn ghost',type:'button',text:'Back',onclick:function(){go(i-1)}}),next=h('button',{class:'btn',type:'button',text:'Next',onclick:function(){go(i+1)}});
+  function go(k){i=clamp(k,0,N-1);var s=def.steps[i];
+    chips.forEach(function(c,n){c.classList.toggle('on',n===s.at);c.classList.toggle('done',n<s.at);if(n===s.at)c.setAttribute('aria-current','step');else c.removeAttribute('aria-current')});
+    say.textContent=s.say;box.textContent=s.box;cnt.textContent='Step '+(i+1)+' of '+N;back.disabled=i===0;next.disabled=i===N-1}
+  host.append(row,say,box,h('div',{class:'row'},back,next,cnt));go(0);
+}
+
+/* Temperature and top-p */
+DEMOS.temp=function(host){
+  var W=[['blue',3.0],['clear',2.2],['cloudy',1.8],['grey',1.4],['falling',0.2],['pizza',-1.0]],T=1,P=1,hist=[],kept=W.map(function(){return 0});
+  var b,read=h('p',{class:'result'}),picks=h('p',{class:'readout'});
+  function calc(){
+    var ex=W.map(function(w){return Math.exp(w[1]/T)}),sum=ex.reduce(function(a,c){return a+c},0),p=ex.map(function(e){return e/sum}),cum=0,keep=[];
+    p.forEach(function(v,n){keep.push(cum<P-1e-9);cum+=v});
+    var ks=0;p.forEach(function(v,n){if(keep[n])ks+=v});
+    return p.map(function(v,n){return keep[n]?v/ks:0});
+  }
+  function draw(){
+    kept=calc();
+    b.set(W.map(function(w,n){return {label:w[0],pct:kept[n]*100,val:kept[n]>0?Math.round(kept[n]*100)+'%':'cut',cut:kept[n]===0}}));
+    var top=Math.max.apply(null,kept);
+    read.textContent=top>0.85?'Almost always the top word. Safe and repeatable.':T>=1.5?'Flat. Odd words get picked more often.':kept.filter(function(v){return v>0}).length<W.length?'Unlikely words are cut off, then the rest are re-weighted.':'A balanced mix.';
+  }
+  function draw1(){var r=Math.random(),c=0,w=W[0][0];for(var n=0;n<kept.length;n++){c+=kept[n];if(r<=c&&kept[n]>0){w=W[n][0];break}}hist.push(w);if(hist.length>12)hist.shift();picks.textContent='Last picks: '+hist.join(', ')}
+  host.append(h('p',{class:'note',text:'The model must finish: "The sky is ___". These are its chances for the next word.'}));
+  b=bars(host);
+  var st=ctl('tt','Temperature',0.1,2,0.1,T,function(v){return v.toFixed(1)},function(v){T=v;draw()});
+  var sp=ctl('tp','Top-p',0.3,1,0.05,P,function(v){return v.toFixed(2)},function(v){P=v;draw()});
+  host.append(st.row,sp.row,read,h('div',{class:'row'},h('button',{class:'btn',type:'button',text:'Pick a word',onclick:draw1}),h('button',{class:'btn ghost',type:'button',text:'Pick 10 times',onclick:function(){for(var k=0;k<10;k++)draw1()}})),picks,
+    h('p',{class:'note',text:'Low temperature: steady. High temperature: surprising. Top-p cuts the unlikely tail first.'}));
+  draw();
+};
+
+/* Precision and recall */
+DEMOS.pr=function(host){
+  var D=[[.97,1],[.92,1],[.88,1],[.81,0],[.74,1],[.66,1],[.58,0],[.47,1],[.41,0],[.30,0],[.22,1],[.15,0],[.08,0],[.04,0]],thr=0.5;
+  var box=h('div',{class:'items'}),read=h('p',{class:'readout'}),say=h('p',{class:'result'});
+  function draw(){
+    box.textContent='';var tp=0,fp=0,fn=0;
+    D.forEach(function(d){var fl=d[0]>=thr,sp=d[1]===1;if(fl&&sp)tp++;if(fl&&!sp)fp++;if(!fl&&sp)fn++;
+      box.append(h('div',{class:'item '+(sp?'bad':'good')+(fl?' flag':'')},h('div',{text:d[0].toFixed(2)}),h('div',{text:sp?'spam':'ok'}),h('div',{text:fl?'flagged':'kept'})))});
+    var pr=tp+fp?tp/(tp+fp):1,rc=tp+fn?tp/(tp+fn):1,f1=pr+rc?2*pr*rc/(pr+rc):0;
+    read.textContent='Flagged '+(tp+fp)+' emails.\nPrecision = '+tp+' / '+(tp+fp)+' = '+Math.round(pr*100)+'%   (flags that were really spam)\nRecall    = '+tp+' / '+(tp+fn)+' = '+Math.round(rc*100)+'%   (spam that got caught)\nF1 = '+Math.round(f1*100)+'%';
+    say.textContent=thr>=0.85?'Strict: few mistakes, but lots of spam gets through.':thr<=0.2?'Loose: catches nearly all spam, but flags good emails too.':'Somewhere in the middle.';
+  }
+  host.append(h('p',{class:'note',text:'14 emails with a spam score from a model. Red = really spam, green = fine. Emails at or above the cutoff are flagged.'}),box);
+  var s=ctl('pt','Cutoff',0.05,0.95,0.05,thr,function(v){return v.toFixed(2)},function(v){thr=v;draw()});
+  host.append(s.row,read,say);draw();
+};
+
+/* Is the change real? */
+DEMOS.noise=function(host){
+  var NS=[20,50,100,200,500,1000,2000],ni=2,gain=5,A=80;
+  var ra=h('div',{class:'rng'}),rb=h('div',{class:'rng'}),la=h('p',{class:'note'}),lb=h('p',{class:'note'}),say=h('p',{class:'result'});
+  function rng(el,p,n){var m=1.96*Math.sqrt(p*(100-p)/n),lo=clamp(p-m,50,100),hi=clamp(p+m,50,100);el.textContent='';
+    var s=h('span',{class:'seg'});s.style.left=(lo-50)*2+'%';s.style.width=Math.max(1,(hi-lo)*2)+'%';var d=h('span',{class:'dot'});d.style.left='calc('+((p-50)*2)+'% - 2px)';el.append(s,d);return [lo,hi,m]}
+  function draw(){var n=NS[ni],B=A+gain,x=rng(ra,A,n),y=rng(rb,B,n);
+    la.textContent='Version A scored '+A+'%. Likely range: '+x[0].toFixed(0)+'% to '+x[1].toFixed(0)+'%.';
+    lb.textContent='Version B scored '+B+'%. Likely range: '+y[0].toFixed(0)+'% to '+y[1].toFixed(0)+'%.';
+    say.textContent=gain===0?'No difference to find.':y[0]>x[1]?'The ranges do not overlap. B is probably really better.':'The ranges overlap. This gap could easily be luck. Test more cases.'}
+  var sn=ctl('nn','Test cases',0,6,1,ni,function(v){return NS[v]},function(v){ni=v;draw()});
+  var sg=ctl('ng','B is better by',0,10,1,gain,function(v){return '+'+v+' pts'},function(v){gain=v;draw()});
+  host.append(h('p',{class:'note',text:'Two versions of a prompt are tested on the same kind of questions. The bar shows where the true score probably sits.'}),sn.row,sg.row,la,ra,lb,rb,say,
+    h('p',{class:'note',text:'Rule of thumb: about plus or minus 1 / sqrt(cases). More cases, narrower ranges. Scale runs from 50% to 100%.'}));
+  draw();
+};
+
+/* Context window */
+DEMOS.ctx=function(host){
+  var parts=[['Instructions',400,'--accent'],['Documents',3000,'--go'],['Chat so far',1500,'--xp'],['Your question',100,'--ink2'],['Room for the answer',1000,'--accent-deep']],W=8000,WS=[8000,32000,128000,200000];
+  var stack=h('div',{class:'stack',role:'img','aria-label':'How full the context window is'}),legend=h('div',{class:'legend'}),read=h('p',{class:'result'}),words=h('p',{class:'note'});
+  var wchips=h('div',{class:'chips',role:'group','aria-label':'Window size'});
+  function draw(){
+    var tot=parts.reduce(function(a,p){return a+p[1]},0);stack.textContent='';legend.textContent='';
+    parts.forEach(function(p){var s=h('span');s.style.width=Math.min(100,p[1]/W*100)+'%';s.style.background=css(p[2]);stack.append(s);
+      var sw=h('span',{class:'sw'});sw.style.background=css(p[2]);legend.append(h('span',null,sw,p[0]+': '+p[1].toLocaleString()))});
+    read.textContent=tot>W?'Too big by '+(tot-W).toLocaleString()+' tokens. Something gets cut, or the call fails.':'Fits. '+Math.round(tot/W*100)+'% full ('+tot.toLocaleString()+' of '+W.toLocaleString()+' tokens).';
+    words.textContent='Rough size: '+tot.toLocaleString()+' tokens is about '+Math.round(tot*.75).toLocaleString()+' words (about 3 words for every 4 tokens).';
+    wchips.textContent='';WS.forEach(function(w){wchips.append(h('button',{class:'chip',type:'button','aria-pressed':w===W?'true':'false',text:(w/1000)+'k tokens',onclick:function(){W=w;draw()}}))});
+  }
+  host.append(h('p',{class:'note',text:'Everything the model reads and writes in one call has to fit in one window. Window sizes here are examples.'}),wchips,stack,legend,read,words);
+  [['Documents',0,60000,500],['Chat so far',0,60000,500],['Instructions',0,3000,100]].forEach(function(c,k){
+    var idx=parts.map(function(p){return p[0]}).indexOf(c[0]);
+    host.append(ctl('cx'+k,c[0],c[1],c[2],c[3],parts[idx][1],function(v){return v.toLocaleString()},function(v){parts[idx][1]=v;draw()}).row)});
+  draw();
+};
+
+/* Search by meaning */
+DEMOS.sem=function(host){
+  var DOC=[['How to bake sourdough bread',[.9,.1,0]],['Easy pasta dinner ideas',[.95,.15,0]],['Gluten free cookie recipe',[.92,.05,0]],['Best beaches in Portugal',[.1,.95,0]],['Cheap flights to Tokyo',[.1,.9,.05]],['Packing list for a ski trip',[.05,.85,.1]],['Fix a Python import error',[0,.05,.95]],['What is a git branch?',[0,0,.98]]];
+  var Q=[['bread recipe',[.9,0,.05]],['hotels near the sea',[.05,.9,0]],['my script crashes',[0,0,1]],['dinner while travelling',[.6,.6,0]]],q=0;
+  var qc=h('div',{class:'chips',role:'group','aria-label':'Search query'}),tb=h('table',{class:'tbl'}),qv=h('p',{class:'readout'});
+  function cos(a,b){var d=0,x=0,y=0;for(var i=0;i<3;i++){d+=a[i]*b[i];x+=a[i]*a[i];y+=b[i]*b[i]}return d/Math.sqrt(x*y)}
+  function draw(){
+    qc.textContent='';Q.forEach(function(x,n){qc.append(h('button',{class:'chip',type:'button','aria-pressed':n===q?'true':'false',text:x[0],onclick:function(){q=n;draw()}}))});
+    var qq=Q[q][1],rows=DOC.map(function(d){return {t:d[0],v:d[1],s:cos(qq,d[1])}}).sort(function(a,b){return b.s-a.s});
+    qv.textContent='Your search as numbers (food, travel, code): ('+qq.join(', ')+')';
+    tb.textContent='';tb.append(h('tr',null,h('th',{text:'Score'}),h('th',{text:'Document'}),h('th',{text:'Picked'})));
+    rows.forEach(function(r,n){tb.append(h('tr',null,h('td',{class:'readout',text:r.s.toFixed(2)}),h('td',{text:r.t}),h('td',{text:n<3?'top 3':''})))});
+  }
+  host.append(h('p',{class:'note',text:'Each text becomes a few numbers. Texts with similar meaning get similar numbers. Search finds the closest ones by cosine similarity.'}),qc,qv,tb,
+    h('p',{class:'note',text:'Toy version with 3 numbers named food, travel and code. Real embeddings have hundreds of numbers and no names, but the search works the same way.'}));
+  draw();
+};
+
+/* Chunking */
+DEMOS.chunk=function(host){
+  var TXT='Acme Mugs sells handmade mugs. Orders ship in two days. Refunds can be requested within 30 days of purchase. Broken items are replaced for free. Gift cards never expire. Support answers email every weekday.',ANS='Refunds can be requested within 30 days of purchase.',size=90,ov=0;
+  var list=h('div',{class:'row'}),read=h('p',{class:'result'});list.style.flexDirection='column';list.style.alignItems='stretch';
+  function draw(){
+    list.textContent='';var step=Math.max(10,size-ov),a0=TXT.indexOf(ANS),a1=a0+ANS.length,found=false,n=0;
+    for(var s=0;s<TXT.length;s+=step){var e=Math.min(TXT.length,s+size),c=h('div',{class:'chunk'}),whole=s<=a0&&e>=a1;n++;if(whole)found=true;
+      c.append(h('span',{class:'n',text:'#'+n}));
+      var i0=Math.max(s,a0),i1=Math.min(e,a1);
+      if(i0<i1){c.append(TXT.slice(s,i0),h('mark',{text:TXT.slice(i0,i1)}),TXT.slice(i1,e))}else c.append(TXT.slice(s,e));
+      list.append(c);if(e>=TXT.length)break}
+    read.textContent=found?'Good: one chunk holds the whole answer sentence.':'Problem: no single chunk holds the whole answer. Search may find only half of it.';
+  }
+  host.append(h('p',{class:'note',text:'A long text is cut into chunks before search. Yellow marks the sentence that answers: "How long do I have to ask for a refund?"'}));
+  host.append(ctl('cs','Chunk size',40,240,10,size,function(v){return v+' chars'},function(v){size=v;if(ov>=size-10){ov=Math.max(0,size-10);so.set(ov)}draw()}).row);
+  var so=ctl('co','Overlap',0,100,10,ov,function(v){return v+' chars'},function(v){ov=Math.min(v,size-10);draw()});
+  host.append(so.row,read,list,h('p',{class:'note',text:'Bigger chunks keep ideas whole. Smaller chunks search more precisely. Overlap repeats a little text at each edge so ideas are not cut in half.'}));
+  draw();
+};
+
+/* RAG in five steps */
+DEMOS.rag=function(host){flow(host,{stages:['Question','Embed','Search','Prompt','Answer'],steps:[
+ {at:0,say:'A person asks a question.',box:'"How long do I have to ask for a refund?"'},
+ {at:1,say:'The question becomes numbers (an embedding), the same way your documents were turned into numbers earlier.',box:'question -> [0.12, -0.40, 0.88, ...]'},
+ {at:2,say:'Search finds the document chunks whose numbers are closest to the question.',box:'Closest chunks:\n1. "Refunds can be requested within 30 days..."   score 0.91\n2. "Broken items are replaced for free."           score 0.62'},
+ {at:3,say:'The top chunks are pasted into the prompt, with an instruction to use only them.',box:'Answer using ONLY the text below.\n\n[1] Refunds can be requested within 30 days of purchase.\n\nQuestion: How long do I have to ask for a refund?'},
+ {at:4,say:'The model answers from the chunks and points to its source.',box:'You have 30 days from purchase to ask for a refund. [1]'}]})};
+
+/* Fast search (HNSW) */
+DEMOS.hnsw=function(host){flow(host,{stages:['Top layer','Middle layer','Bottom layer','Result'],steps:[
+ {at:0,say:'The index has several layers. The top has only a few points with long links. Start there.',box:'Layer 2:  few points, long jumps\nLayer 1:  more points\nLayer 0:  every point, short links'},
+ {at:0,say:'Hop along links to whichever point is closest to your query. Stop when no neighbor is closer.',box:'start -> A -> C   (C is closest here)'},
+ {at:1,say:'Drop down a layer at C. There are more points, so you can aim more precisely.',box:'from C -> F -> H   (H is closest here)'},
+ {at:2,say:'Drop to the bottom layer, which holds every point. Look at the neighbors around H.',box:'from H -> check its nearby points\nkeep the best few'},
+ {at:3,say:'You looked at a small number of points, not all of them. The answer is usually right, not guaranteed. That is why it is called approximate.',box:'Result: the closest few points (almost always the true closest)\n\nTrade-off: look at more points = better answers, slower search.'}]})};
+
+/* Agentic RAG */
+DEMOS.arag=function(host){flow(host,{stages:['Question','Search','Check','Rewrite','Answer'],steps:[
+ {at:0,say:'A hard question that one search may not answer.',box:'"Why did sales drop in Q3?"'},
+ {at:1,say:'Search once, like normal RAG.',box:'query: "why did sales drop in Q3"\nfound: Q2 summary, a general sales FAQ'},
+ {at:2,say:'The model checks: is this enough to answer? Here it is not.',box:'Check: "These do not mention Q3. Not enough."'},
+ {at:3,say:'Instead of guessing, it rewrites the query and tries again.',box:'new query: "Q3 sales report by region"'},
+ {at:1,say:'Search a second time.',box:'found: Q3 report (sales down 8% in the north region)'},
+ {at:2,say:'Check again. This time it is enough.',box:'Check: "This answers the question."'},
+ {at:4,say:'Answer from what was found, with the source. A normal RAG app would have answered after the first search.',box:'Sales dropped mainly in the north region. [Q3 report]'}]})};
+
+/* Why models make things up */
+DEMOS.hall=function(host){
+  var doc=false,idk=false,q=0;
+  var QS=[['What is the refund window?',{doc:'You have 30 days from purchase. [Acme policy]',nodoc:'Acme offers a 60-day refund window.',inDoc:true}],['Does Acme ship to Mars?',{doc:'Yes, Acme ships to Mars in 10 days.',nodoc:'Yes, Acme ships to Mars in 10 days.',inDoc:false}]];
+  var qc=h('div',{class:'chips',role:'group','aria-label':'Question'}),tg=h('div',{class:'chips',role:'group','aria-label':'Settings'}),ans=h('p',{class:'result','aria-live':'polite'}),why=h('p',{class:'note'});
+  function draw(){
+    qc.textContent='';QS.forEach(function(x,n){qc.append(h('button',{class:'chip',type:'button','aria-pressed':n===q?'true':'false',text:x[0],onclick:function(){q=n;draw()}}))});
+    tg.textContent='';
+    tg.append(h('button',{class:'chip',type:'button','aria-pressed':doc?'true':'false',text:'Give it Acme\'s policy text',onclick:function(){doc=!doc;draw()}}),
+      h('button',{class:'chip',type:'button','aria-pressed':idk?'true':'false',text:'Allow "I don\'t know"',onclick:function(){idk=!idk;draw()}}));
+    var x=QS[q][1],t,ok;
+    if(doc&&x.inDoc){t=x.doc;ok=true}
+    else if(idk){t=doc?'The policy text does not say.':'I do not have Acme\'s information. Please check their site.';ok=true}
+    else{t=doc?x.doc:x.nodoc;ok=false}
+    ans.textContent=(ok?'Honest and useful: ':'Made up: ')+'"'+t+'"';
+    why.textContent=ok?'It either used the source or admitted a gap.':'It sounds sure, but nothing backs it up. This is a hallucination.';
+  }
+  host.append(h('p',{class:'note',text:'Pick a question, then switch the helps on and off. These replies are examples of typical behavior, not a live model.'}),qc,tg,ans,why);
+  draw();
+};
+
+/* JSON output and checking */
+DEMOS.json=function(host){
+  var P={ok:'{"title":"Pay rent","priority":"high","due_days":3}',missing:'{"title":"Pay rent","due_days":3}',wrong:'{"title":"Pay rent","priority":"urgent","due_days":"soon"}',chatty:'Sure! Here is the task: {"title":"Pay rent"}'};
+  var ta=h('textarea',{class:'code',rows:5,'aria-label':'Model output'}),list=h('ul',{class:'msgs','aria-live':'polite'}),say=h('p',{class:'result'});
+  ta.value=P.ok;
+  function line(ok,t){list.append(h('li',{text:(ok?'PASS: ':'FAIL: ')+t}))}
+  function check(){
+    list.textContent='';var o,bad=0;
+    try{o=JSON.parse(ta.value)}catch(e){line(false,'Not valid JSON. The model added other text or broke the format.');say.textContent='Rejected. Send the error back to the model and ask again (try at most 2 times).';return}
+    var isO=o&&typeof o==='object'&&!Array.isArray(o);if(!isO){line(false,'Expected one JSON object.');say.textContent='Rejected.';return}
+    function t(ok,m){line(ok,m);if(!ok)bad++}
+    t(typeof o.title==='string'&&o.title.length>0,'title is a non-empty string');
+    t(['low','medium','high'].indexOf(o.priority)>-1,'priority is low, medium or high'+(o.priority===undefined?' (missing)':''));
+    t(o.due_days===undefined||(Number.isInteger(o.due_days)&&o.due_days>=0),'due_days (optional) is a whole number, 0 or more');
+    say.textContent=bad?'Rejected: '+bad+' problem'+(bad>1?'s':'')+'. Send these errors back to the model and retry.':'Accepted. Safe to pass to the rest of your program.';
+  }
+  ta.addEventListener('input',check);
+  function btn(l,k){return h('button',{class:'chip',type:'button',text:l,onclick:function(){ta.value=P[k];check()}})}
+  host.append(h('p',{class:'note',text:'Your program expects: title (text), priority (low, medium or high), due_days (optional whole number). Load an example or edit the text.'}),
+    h('div',{class:'chips'},btn('Good output','ok'),btn('Missing field','missing'),btn('Wrong values','wrong'),btn('Chatty text','chatty')),ta,list,say);
+  check();
+};
+
+/* The tool-call loop */
+DEMOS.tool=function(host){flow(host,{stages:['You ask','Model picks tool','Your code runs it','Result goes back','Model answers'],steps:[
+ {at:0,say:'You ask something the model cannot know by itself. You also tell it which tools exist.',box:'User: "What is the weather in Paris?"\nTools: get_weather(city)'},
+ {at:1,say:'The model does not run anything. It only writes a request that says which tool to use.',box:'{"tool":"get_weather","args":{"city":"Paris"}}'},
+ {at:2,say:'Your code reads the request and runs the real function.',box:'get_weather("Paris")  ->  {"temp_c": 14, "sky": "cloudy"}'},
+ {at:3,say:'You send the result back to the model as a new message.',box:'Tool result: {"temp_c": 14, "sky": "cloudy"}'},
+ {at:4,say:'Now the model can answer. If it needs more, it asks for another tool and the loop repeats.',box:'"It is 14 degrees and cloudy in Paris."'}]})};
+
+/* Read your failures */
+DEMOS.err=function(host){
+  var CAT=['Wrong document found','Ignored the document','Bad format','Out of date'],F=[['Asked about returns, got shipping text',0],['Said 60 days, document says 30',1],['Answer was not JSON',2],['Quoted last year\'s price',3],['Asked about warranty, got a gift card page',0],['Added a fact not in the document',1],['Missing the "priority" field',2],['Gave an old phone number',3],['Asked about sizes, got the returns page',0],['Skipped the second half of the question',1],['Returned a list when asked for a table',2],['Asked about the new plan, got the old plan page',0]],lab=F.map(function(){return -1});
+  var rows=h('div',{class:'row'}),bx=h('div'),say=h('p',{class:'result'}),bar;rows.style.flexDirection='column';rows.style.alignItems='stretch';
+  function draw(){
+    var cnt=CAT.map(function(){return 0}),un=0;lab.forEach(function(l){if(l<0)un++;else cnt[l]++});
+    bar.set(CAT.map(function(c,n){return {label:c,pct:cnt[n]/F.length*100,val:String(cnt[n])}}));
+    var m=Math.max.apply(null,cnt),top=cnt.indexOf(m);
+    say.textContent=un===F.length?'Label each failure. The chart fills in as you go.':un?un+' left to label.':'Biggest group: "'+CAT[top]+'" ('+m+' of '+F.length+'). Fix that first.';
+  }
+  host.append(h('p',{class:'note',text:'12 answers your app got wrong. Choose the kind of mistake for each one.'}));
+  F.forEach(function(f,n){var sel=h('select',{class:'sel','aria-label':'Mistake type for: '+f[0]},h('option',{value:'-1',text:'Pick a type'}));CAT.forEach(function(c,k){sel.append(h('option',{value:String(k),text:c}))});
+    sel.addEventListener('change',function(){lab[n]=+sel.value;draw()});sel.dataset.n=n;
+    rows.append(h('div',{class:'row'},h('span',{text:(n+1)+'. '+f[0],style:'flex:1 1 220px'}),sel))});
+  host.append(rows,h('div',{class:'row'},h('button',{class:'btn ghost',type:'button',text:'Fill in an example',onclick:function(){F.forEach(function(f,n){lab[n]=f[1]});host.querySelectorAll('select.sel').forEach(function(s,n){s.value=String(lab[n])});draw()}})));
+  bar=bars(host);host.append(say);draw();
+};
+
+/* What does it cost? */
+DEMOS.cost=function(host){
+  var R=1000,I=2000,O=300,PI=3,PO=15,cache=false,out=h('p',{class:'readout'}),say=h('p',{class:'result'});
+  function money(v){return '$'+(v>=100?Math.round(v).toLocaleString():v>=1?v.toFixed(2):v.toFixed(4))}
+  function draw(){
+    var inCost=I*PI/1e6*(cache?0.1*0.8+0.2:1),per=inCost+O*PO/1e6,mo=per*R*30;
+    out.textContent='Per request: '+money(per)+'  (reading '+money(inCost)+' + writing '+money(O*PO/1e6)+')\nPer day: '+money(per*R)+'\nPer month: '+money(mo);
+    say.textContent=I*PI>=O*PO*1.0?'Reading the prompt costs more than writing the answer here. Shorter prompts or caching save the most.':'Writing the answer is the bigger cost here. Shorter answers save the most.';
+  }
+  host.append(h('p',{class:'note',text:'Prices below are made-up examples. Put in your provider\'s real prices. "Tokens" are small pieces of text.'}));
+  [['Requests per day','cr',10,100000,10,R,function(v){R=v}],['Prompt tokens','ci',100,30000,100,I,function(v){I=v}],['Answer tokens','co',20,3000,20,O,function(v){O=v}],['Price per 1M prompt tokens','cp',0.1,20,0.1,PI,function(v){PI=v}],['Price per 1M answer tokens','cq',0.5,80,0.5,PO,function(v){PO=v}]].forEach(function(c){
+    host.append(ctl(c[1],c[0],c[2],c[3],c[4],c[5],function(v){return c[1]==='cp'||c[1]==='cq'?'$'+v:v.toLocaleString()},function(v){c[6](v);draw()}).row)});
+  host.append(h('div',{class:'chips'},h('button',{class:'chip',type:'button','aria-pressed':'false',text:'Caching on (example: 80% of the prompt repeats, repeats cost 10%)',onclick:function(){cache=!cache;this.setAttribute('aria-pressed',cache?'true':'false');draw()}})),out,say);
+  draw();
+};
+
 /* ================= WATCH: step-through animations ================= */
 WATCH.git={label:'An animated commit graph: a branch is created, gets a commit, and is merged back into main.',height:230,hold:3000,steps:[
  {say:'A repository starts with one commit on main.',cmd:'git commit -m "start"'},
@@ -795,6 +1073,107 @@ lesson(1,{id:'gradient-descent',short:'Rolling downhill',title:'Learning is roll
         {q:'What does the gradient tell you?',o:['Which way is uphill, so you step the opposite way','How many steps are left','The final value of w'],a:0,why:'The gradient points uphill. Descent subtracts it, which moves you downhill.',hint:'Check the sign of the gradient when w is left of the minimum.'}],
   links:[['Optimization: the gradient descent family',P1+'08-optimization'],['Calculus for ML',P1+'04-calculus-for-ml'],['Backpropagation from scratch (Phase 3)',REPO+'/tree/main/phases/03-deep-learning-core/03-backpropagation']]});
 
+/* ---- more lessons: one idea each, plain words ---- */
+function PH(p){return REPO+'/tree/main/phases/'+p}
+
+lesson(1,{id:'temperature',short:'Temperature and top-p',title:'Temperature sets how adventurous the next word is',tag:'Behind Phase 1, lesson 16: Sampling Methods',
+  lead:'A model gives every possible next word a chance. Temperature decides whether it plays safe or takes risks. Top-p cuts off the long tail of unlikely words.',
+  demo:'temp',takeaway:'Low temperature for facts and code. Higher temperature for brainstorming. Top-p is a second dial that does a similar job.',
+  quiz:[{q:'You want the same answer every time, for example when pulling data out of text. What do you do with temperature?',o:['Set it low','Set it high','It makes no difference'],a:0,why:'Low temperature lets the top word win almost every time.',hint:'Slide temperature to the left and pick a word a few times.'},
+        {q:'What does top-p do?',o:['Cuts off unlikely words before picking','Makes the answer longer','Picks the most expensive word'],a:0,why:'It keeps the most likely words until their chances add up to p, then picks among those.',hint:'Lower Top-p and watch words turn into "cut".'}],
+  links:[['Sampling methods',PH('01-math-foundations/16-sampling-methods')]]});
+
+lesson(1,{id:'noise',short:'Is the change real?',title:'A small gain on few tests may just be luck',tag:'Behind Phase 1, lesson 15: Statistics for ML',
+  lead:'You change a prompt and the score goes from 80% to 85%. Is it better, or luck? With few test cases, small gaps mean little.',
+  demo:'noise',takeaway:'Before you trust a gain, ask how many cases it was tested on. More cases means a narrower range.',
+  quiz:[{q:'A prompt scores 5 points higher on 20 test cases. What should you do?',o:['Test on many more cases before deciding','Ship it right away','Assume it is worse'],a:0,why:'With 20 cases the ranges overlap a lot, so the gap could be luck.',hint:'Set test cases to 20 and look at the ranges.'},
+        {q:'You test on 100 times more cases. What happens to the likely range?',o:['It gets about 10 times narrower','It gets wider','It stays the same'],a:0,why:'The range shrinks with the square root of the number of cases, and the square root of 100 is 10.',hint:'Drag test cases from 20 to 2000.'}],
+  links:[['Statistics for ML',PH('01-math-foundations/15-statistics-for-ml')]]});
+
+lesson(2,{id:'precision-recall',short:'Precision and recall',title:'Precision and recall are two ways to be right',tag:'Behind Phase 2, lesson 9: Model Evaluation',
+  lead:'A spam filter flags emails. Precision asks: of the ones it flagged, how many were really spam? Recall asks: of all the spam, how much did it catch?',
+  demo:'pr',takeaway:'A stricter cutoff buys precision and costs recall. A looser one does the reverse. Choose by which mistake hurts more.',
+  quiz:[{q:'The filter flags only 2 emails, both really spam, but 5 spam emails got through. What are precision and recall?',o:['Precision high, recall low','Precision low, recall high','Both high'],a:0,why:'Every flag was right (high precision), but it missed most of the spam (low recall).',hint:'Set the cutoff to 0.9.'},
+        {q:'Missing a real fraud case is very costly. Which do you favor?',o:['Recall','Precision','Neither'],a:0,why:'Favor recall to catch more real cases, and accept some false alarms.',hint:'Lower the cutoff and see what gets caught.'}],
+  links:[['Model evaluation',PH('02-ml-fundamentals/09-model-evaluation')]]});
+
+lesson(11,{id:'context-window',short:'The context window',title:'Everything shares one window',tag:'Behind Phase 11, lesson 5: Context Engineering',
+  lead:'A model can only look at so much text at once. That limit is the context window. Your instructions, documents, chat history, question and the answer itself all share it.',
+  demo:'ctx',takeaway:'A bigger window does not mean better answers. Send only what the model needs, and leave room for the reply.',
+  quiz:[{q:'Where does the model get space to write its answer?',o:['The same window as everything else','A separate unlimited space','Only from the chat history'],a:0,why:'The reply counts toward the window too, so you must leave room for it.',hint:'Look at "Room for the answer" in the bar.'},
+        {q:'A long chat now fails with a "too long" error. What can you do?',o:['Shorten or summarize old messages, or send fewer documents','Ask the model to try harder','Raise the temperature'],a:0,why:'Only changing what you send changes what fits.',hint:'Raise "Chat so far" in the demo until it overflows.'}],
+  links:[['Context engineering',PH('11-llm-engineering/05-context-engineering')]]});
+
+lesson(11,{id:'search-meaning',short:'Search by meaning',title:'Embeddings turn meaning into numbers you can search',tag:'Behind Phase 11, lesson 4: Embeddings',
+  lead:'An embedding turns text into a list of numbers so that similar meaning gives similar numbers. Search then means finding the closest numbers, not matching exact words.',
+  demo:'sem',takeaway:'This is why "my script crashes" can find "Fix a Python import error" even though they share no words.',
+  quiz:[{q:'Why can "my script crashes" find "Fix a Python import error"?',o:['Their numbers point in nearly the same direction','They share the word Python','Search ignores meaning'],a:0,why:'Both texts are about code, so their numbers line up and the cosine score is high.',hint:'Pick "my script crashes" and read the scores.'},
+        {q:'What is cosine similarity used for here?',o:['Scoring how closely two sets of numbers point the same way','Counting words','Compressing text'],a:0,why:'It is the same idea as the vectors lesson: 1 means the same direction.',hint:'Compare the top score with the bottom score.'}],
+  links:[['Embeddings',PH('11-llm-engineering/04-embeddings')],['Embedding models deep dive',PH('05-nlp-foundations-to-advanced/22-embedding-models-deep-dive')]]});
+
+lesson(11,{id:'chunking',short:'Chunking',title:'Where you cut the text changes what search can find',tag:'Behind Phase 11, lesson 6 and Phase 5, lesson 23: Chunking Strategies',
+  lead:'You cannot search a whole library at once, so long text is cut into chunks first. Where you cut changes what search can find.',
+  demo:'chunk',takeaway:'Pick a chunk size big enough to hold one whole idea. A little overlap protects ideas that sit near a cut.',
+  quiz:[{q:'Search keeps finding only half of an answer. What could help?',o:['Larger chunks or more overlap','Smaller chunks','A higher temperature'],a:0,why:'The answer sentence was cut in two. Bigger chunks or overlap keep it together.',hint:'Raise Chunk size until the warning goes away.'},
+        {q:'What is a downside of very large chunks?',o:['Search gets less precise and the prompt fills up faster','They cost nothing','They hide the answer'],a:0,why:'A big chunk carries lots of unrelated text, which dilutes the match and uses up the window.',hint:'Set Chunk size to the maximum and read the chunks.'}],
+  links:[['Chunking strategies for RAG',PH('05-nlp-foundations-to-advanced/23-chunking-strategies-rag')],['RAG',PH('11-llm-engineering/06-rag')]]});
+
+lesson(11,{id:'rag',short:'RAG in five steps',title:'RAG: look it up first, then answer',tag:'Behind Phase 11, lesson 6: RAG',
+  lead:'RAG means retrieval-augmented generation. Before the model answers, you look up the relevant text and paste it into the prompt. The model answers from your text, not from memory.',
+  demo:'rag',takeaway:'Retrieve first, then generate. The model only sees what you retrieve, so retrieval quality sets the ceiling.',
+  quiz:[{q:'In RAG, what gets pasted into the prompt?',o:['The chunks that matched the question','Your whole database','The model\'s weights'],a:0,why:'Only the best matching chunks go in, so the prompt stays small and focused.',hint:'Go to the Prompt step.'},
+        {q:'Search returns the wrong chunks. Will the answer probably be good?',o:['No, the model only sees what you retrieve','Yes, the model fixes it','Yes, it always knows the right facts'],a:0,why:'Bad retrieval means the model has the wrong text in front of it.',hint:'Look at which chunks reach the Prompt step.'}],
+  links:[['RAG',PH('11-llm-engineering/06-rag')],['Advanced RAG',PH('11-llm-engineering/07-advanced-rag')]]});
+
+lesson(11,{id:'hnsw',short:'Fast search (HNSW)',title:'HNSW hops to the answer instead of checking everything',tag:'Behind Phase 11, lesson 4: Embeddings',
+  lead:'Comparing a question to every document is slow when there are millions. HNSW builds a layered map, so search can hop close to the answer in a few steps.',
+  demo:'hnsw',takeaway:'You trade a little accuracy for a lot of speed. "Approximate" means it usually finds the true closest point, not always.',
+  quiz:[{q:'Why is HNSW search fast?',o:['It skips most points by hopping along links, layer by layer','It checks every point at once','It stores fewer documents'],a:0,why:'Top layers give long jumps, bottom layers give fine detail, so few points get checked.',hint:'Go through the steps and watch the layers.'},
+        {q:'What does "approximate" mean here?',o:['It may occasionally miss the true closest point','The scores are rounded','It only works on small data'],a:0,why:'Looking at fewer points is faster but can miss the best one.',hint:'Read the last step.'}],
+  links:[['Embeddings',PH('11-llm-engineering/04-embeddings')]]});
+
+lesson(11,{id:'agentic-rag',short:'Agentic RAG',title:'Agentic RAG: search, check, search again',tag:'Behind Phase 11, lesson 7 and Phase 14, lesson 1',
+  lead:'Normal RAG searches once. Agentic RAG lets the model look at what it found and decide: good enough, or try a better search?',
+  demo:'arag',takeaway:'It handles harder questions, but every loop costs time and money. Put a cap on the number of tries.',
+  quiz:[{q:'What does agentic RAG add to normal RAG?',o:['A check step that can trigger another search','A bigger window','A different embedding'],a:0,why:'The model judges the results and can rewrite the query and search again.',hint:'Find the Check step.'},
+        {q:'Why cap the number of retries?',o:['Each loop adds cost and delay, and it could go on forever','The model forgets','Search stops working'],a:0,why:'Without a cap a bad question could loop for a long time and run up the bill.',hint:'Count the extra steps compared with normal RAG.'}],
+  links:[['Advanced RAG',PH('11-llm-engineering/07-advanced-rag')],['The agent loop',PH('14-agent-engineering/01-the-agent-loop')]]});
+
+lesson(11,{id:'hallucination',short:'Hallucinations',title:'Why models make things up',tag:'Behind Phase 11, lessons 6 and 12',
+  lead:'A model predicts likely words. If it lacks the facts, a likely-sounding answer still comes out. That is a hallucination. Two things help: give it sources, and let it say it does not know.',
+  demo:'hall',takeaway:'You cannot switch hallucinations off. You reduce them: ground answers in documents, allow "I don\'t know", and check important claims.',
+  quiz:[{q:'The model answers confidently with no source. Does that mean it is right?',o:['No, confidence is not evidence','Yes','Only if the answer is long'],a:0,why:'Models sound sure even when they are guessing.',hint:'Turn both switches off and read the answers.'},
+        {q:'You gave it the policy text, but it still invented an answer about something the text does not cover. What fixes that?',o:['Tell it to say so when the text lacks the answer','Delete the text','Raise the temperature'],a:0,why:'Allowing "I don\'t know" gives it a safe way out when the source is silent.',hint:'Turn on both switches and pick the Mars question.'}],
+  links:[['RAG',PH('11-llm-engineering/06-rag')],['Guardrails',PH('11-llm-engineering/12-guardrails')]]});
+
+lesson(11,{id:'json-output',short:'JSON output',title:'Ask for JSON, then check the JSON',tag:'Behind Phase 11, lesson 3: Structured Outputs',
+  lead:'Programs need predictable answers. You ask the model for JSON in a fixed shape, then your code checks it before using it. If the check fails, send the error back and retry.',
+  demo:'json',takeaway:'Never trust model output blindly. Define the shape, validate it, and retry a limited number of times.',
+  quiz:[{q:'The model returns a friendly sentence before the JSON. What should your program do?',o:['Reject it and ask again with the error','Use it anyway','Delete the JSON'],a:0,why:'Extra text breaks the parser, so treat it as a failure and retry.',hint:'Press "Chatty text".'},
+        {q:'Why define allowed values like low, medium and high?',o:['So the rest of your code can rely on them','To make the model slower','JSON requires it'],a:0,why:'A fixed list means no surprise values like "urgent" later in your program.',hint:'Press "Wrong values".'}],
+  links:[['Structured outputs',PH('11-llm-engineering/03-structured-outputs')]]});
+
+lesson(11,{id:'tool-loop',short:'The tool-call loop',title:'Tool calling: the model asks, your code acts',tag:'Behind Phase 11, lesson 9 and Phase 13, lesson 2: Function Calling',
+  lead:'A model cannot check the weather or open a file by itself. With tool calling it writes a small request, your code runs the tool, and the result goes back to the model.',
+  demo:'tool',takeaway:'The model only asks. Your code decides whether to run it. That is where permissions and safety checks live.',
+  quiz:[{q:'Who runs the tool?',o:['Your code','The model','The user'],a:0,why:'The model only writes the request. Your program does the work.',hint:'Look at step 3.'},
+        {q:'Why does the result go back to the model?',o:['So it can write the final answer using it','To train it','To delete the request'],a:0,why:'The model needs the real data to answer correctly.',hint:'Look at steps 4 and 5.'}],
+  links:[['Function calling',PH('11-llm-engineering/09-function-calling')],['Function calling deep dive',PH('13-tools-and-protocols/02-function-calling-deep-dive')]]});
+
+lesson(11,{id:'error-analysis',short:'Read your failures',title:'Group the failures to find what to fix',tag:'Behind Phase 11, lesson 10: Evaluation',
+  lead:'When an app gives wrong answers, do not guess a fix. Collect the failures, read them, and put each into a group. The biggest group is your next job.',
+  demo:'err',takeaway:'This is called error analysis. A short list of real failures beats a long list of ideas. Keep fixed failures as test cases so they stay fixed.',
+  quiz:[{q:'Which group of failures do you work on first?',o:['The biggest one','The easiest one','The most recent one'],a:0,why:'The biggest group is where a fix helps the most answers.',hint:'Press "Fill in an example" and read the chart.'},
+        {q:'You fixed a failure. What do you do with that example?',o:['Keep it as a test case','Delete it','Hide it'],a:0,why:'Kept test cases tell you if the problem ever comes back.',hint:'Think about what happens after the next change.'}],
+  links:[['Evaluation',PH('11-llm-engineering/10-evaluation')]]});
+
+lesson(17,{id:'token-cost',short:'What does it cost?',title:'Tokens are the bill',tag:'Behind Phase 17, lesson 27: FinOps for LLMs',
+  lead:'You pay for the tokens you send in and the tokens the model writes. Answer tokens usually cost more each, but long prompts add up fast.',
+  demo:'cost',takeaway:'Estimate cost before you launch: requests times tokens times price. Shorter prompts, shorter answers and caching save the most.',
+  quiz:[{q:'Which usually costs more per token?',o:['Answer (output) tokens','Prompt (input) tokens','They are always equal'],a:0,why:'Most providers charge more for output tokens than for input tokens.',hint:'Compare the two price sliders\' starting values.'},
+        {q:'What does caching help with?',o:['Not paying full price again for a prompt that repeats','Making answers longer','Removing the need for tokens'],a:0,why:'Repeated parts of a prompt can be billed at a lower rate.',hint:'Turn caching on and watch the cost drop.'}],
+  links:[['FinOps for LLMs',PH('17-infrastructure-and-production/27-finops-llms')],['Caching and cost',PH('11-llm-engineering/11-caching-cost')]]});
+
 /* ================= GLOSSARY ================= */
 /* One entry per term. pat = regex source that finds it in lesson text (omit for glossary-only terms). */
 var GLOSSARY=[
@@ -805,7 +1184,7 @@ var GLOSSARY=[
  {id:'cosine',term:'cosine similarity',pat:'cosine similarity',def:'A score for how closely two vectors point the same way. 1 means the same direction, 0 means unrelated, and -1 means opposite. Length is ignored.'},
  {id:'cpu',term:'CPU',pat:'CPUs?',def:'The general-purpose chip in a computer. It has a few strong cores, and each handles one task at a time very quickly.'},
  {id:'dot',term:'dot product',pat:'dot product',def:'Multiply two lists of numbers entry by entry, then add the results. For two vectors it is 0 when they are perpendicular.'},
- {id:'embedding',term:'embedding',def:'A vector that stands for a word, image or other item, built so that similar items get similar vectors. Comes up later in the course.'},
+ {id:'embedding',term:'embedding',pat:'embeddings?',def:'A vector that stands for a word, image or other item, built so that similar items get similar vectors. Comes up later in the course.'},
  {id:'gpu',term:'GPU',pat:'GPUs?',def:'A chip with thousands of simple cores that work at the same time. It suits jobs that split into many independent pieces, such as neural network math.'},
  {id:'gradient',term:'gradient',pat:'gradients?',def:'The direction and steepness of uphill on a curve such as the loss. Gradient descent steps the opposite way, which is downhill.'},
  {id:'gd',term:'gradient descent',pat:'gradient descent',def:'Reduce error by repeating one step: work out the gradient of the loss, then move the weights a little in the opposite direction.'},
@@ -827,6 +1206,25 @@ var GLOSSARY=[
  {id:'package',term:'package',pat:'packages?',def:'Ready-made code that you install and use in your own project, such as numpy.'},
  {id:'perp',term:'perpendicular',pat:'perpendicular',def:'At a right angle (90 degrees). Perpendicular vectors share no direction, so their dot product is 0.'},
  {id:'pip',term:'pip',def:'Python\'s tool for installing packages, for example "pip install numpy".'},
+ {id:'temperature',term:'temperature',pat:'temperature',def:'A dial for how adventurous a model is. Low means it nearly always picks the likeliest word. High means it takes more risks.'},
+ {id:'topp',term:'top-p',pat:'top-p',def:'A dial that drops the unlikely words before the model picks. With top-p 0.9 it picks only among the most likely words that add up to 90%.'},
+ {id:'token',term:'token',pat:'tokens?',def:'A small piece of text, often a short word or part of a word. Models read and write tokens, and prices are per token. About 3 words for every 4 tokens.'},
+ {id:'ctxwin',term:'context window',pat:'context windows?',def:'The most text a model can look at in one call, counted in tokens. Instructions, documents, chat history, your question and the answer all share it.'},
+ {id:'prompt',term:'prompt',pat:'prompts?',def:'The text you send to a model: your instructions, any documents, and the question.'},
+ {id:'chunk',term:'chunk',pat:'chunk(?:s|ing|ed)?',def:'A piece of a longer text, cut so that search can find just the relevant part.'},
+ {id:'rag',term:'RAG',pat:'RAG|retrieval-augmented generation',def:'Retrieval-augmented generation. Look up relevant text first, paste it into the prompt, then let the model answer from it.'},
+ {id:'retrieval',term:'retrieval',pat:'retriev(?:al|e|es|ed|ing)',def:'Finding the pieces of text that are most relevant to a question.'},
+ {id:'halluc',term:'hallucination',pat:'hallucinat(?:ion|ions|e|es|ed|ing)',def:'When a model states something that sounds right but is made up.'},
+ {id:'grounding',term:'grounding',pat:'ground(?:ed|ing)',def:'Tying an answer to real source text, so it can be checked.'},
+ {id:'json',term:'JSON',pat:'JSON',def:'A plain-text way to write structured data, like {"title": "Pay rent", "priority": "high"}. Programs can read it reliably.'},
+ {id:'precision',term:'precision',pat:'precision',def:'Of the things your system flagged, how many were truly right. High precision means few false alarms.'},
+ {id:'recall',term:'recall',pat:'recall',def:'Of all the things that should have been found, how many you actually found. High recall means few misses.'},
+ {id:'hnsw',term:'HNSW',pat:'HNSW',def:'A layered map of linked points that lets search hop quickly toward the closest vector, instead of checking every one.'},
+ {id:'agentic',term:'agentic',pat:'agentic',def:'The model makes decisions along the way, such as whether to search again, instead of following one fixed path.'},
+ {id:'toolcall',term:'tool calling',pat:'tool call(?:s|ing)?',def:'The model writes a request to use a tool, such as get_weather. Your code runs it and sends the result back.'},
+ {id:'erroran',term:'error analysis',pat:'error analysis',def:'Reading real failures and grouping them, so you fix the biggest group first.'},
+ {id:'testcase',term:'test case',pat:'test cases?',def:'One example question with a known good answer, used to check your app.'},
+ {id:'caching',term:'caching',pat:'cach(?:e|es|ed|ing)',def:'Reusing work you already did. With prompt caching, a repeated part of a prompt is billed at a lower rate.'},
  {id:'curl',term:'curl',pat:'curl',def:'A command-line tool that downloads from a URL. Setup lines like "curl -LsSf <url> | sh" download an installer and run it. The flags mean: follow redirects (L), stay quiet (s), still show errors (S), and fail on server errors (f). Only run "| sh" lines from sources you trust.'},
  {id:'uv',term:'uv',pat:'uv',def:'A fast tool that installs Python versions, creates virtual environments and installs packages. The course uses it instead of plain pip.'},
  {id:'cuda',term:'CUDA',pat:'CUDA',def:'NVIDIA\'s system for running code on its GPUs. PyTorch uses it when you have an NVIDIA card.'},
