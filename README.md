@@ -17,6 +17,7 @@ Each lesson has a short animation or video, a live demo, and a two-question quiz
 - The forward deployed route, complete: outcomes before output, the real workflow, assumptions and risk, the smallest slice, specs, evaluation, production app, success metrics, prototype vs pilot vs production, canary rollout, the feedback ratchet. Plus a short lesson on OKF as an alternative to RAG for exact facts.
 - Forward deployed foundations: Docker, data and git, silent bugs, prompts, few-shot, caching, guardrails, the tool interface, tool descriptions, observability, AI gateway, AI for incidents, secrets, verification gates.
 - Agents and tools: building an MCP server, workflow patterns, the agent SDK, failure modes, prompt injection, and the agent workbench lessons (rules as checks, repo memory, init scripts, scope contracts, real feedback, reviewer, handoff, framing, planning, delegation).
+- LLM concepts and serving for interviews: tokenizers, the transformer block, KV cache, SFT, RLHF, DPO, quantization, faster inference, LoRA, vLLM, serving metrics, model routing, FinOps. Plus hybrid search, document parsing, terminal skills and the dev environment.
 - A glossary of plain-language terms, linked from the lessons.
 - A map of all 20 phases and a "where to start" guide from the source README.
 

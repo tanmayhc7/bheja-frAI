@@ -1489,6 +1489,127 @@ DEMOS.delegate=function(host){sorter(host,{intro:'Should you hand this to severa
  {t:'A small one-line fix.',a:1,why:'Coordination costs more than the work.'},
  {t:'Adding the same logging to ten separate services.',a:0,why:'Many independent copies of one job.'},
  {t:'A change where step 2 needs step 1\'s result.',a:1,why:'It is a chain, not parallel work.'}]})};
+/* ---- LLM concepts, serving and cost ---- */
+DEMOS.tok=function(host){
+  var V=['antidis','establish','ment','arian','ism','un','believ','able','token','ize','r','the','cat','sat','on','mat',' ','ing','s','re','a','e','i','o','t','n'].sort(function(a,b){return b.length-a.length});
+  var inp=h('input',{class:'tin',type:'text',value:'unbelievable',id:'tokin','aria-label':'Text to split'}),out=h('div',{class:'words'}),say=h('p',{class:'result','aria-live':'polite'}),row=h('div',{class:'chips'});
+  function split(t){var r=[],i=0;while(i<t.length){var m=null;for(var k=0;k<V.length;k++){if(t.substr(i,V[k].length)===V[k]){m=V[k];break}}if(!m)m=t[i];r.push(m);i+=m.length}return r}
+  function draw(){var p=split(inp.value);out.textContent='';p.forEach(function(x){out.append(h('span',{class:'chip',text:x===' '?'␣':x}))});
+    say.textContent=p.length+' piece'+(p.length===1?'':'s')+' for '+inp.value.length+' characters.'+(p.length>=inp.value.length*0.8&&inp.value.length>=5?' Nearly one piece per letter: the tokenizer does not know this word.':'')}
+  inp.addEventListener('input',draw);
+  [['unbelievable'],['the cat sat on the mat'],['tokenizer'],['antidisestablishmentarianism'],['zxqvj']].forEach(function(t){row.append(h('button',{class:'chip',type:'button',text:t[0],onclick:function(){inp.value=t[0];draw()}}))});
+  host.append(h('p',{class:'note',text:'A toy tokenizer with a tiny vocabulary. It always takes the longest known piece. Real ones learn about 100,000 pieces from data.'}),inp,row,out,say);draw();
+};
+
+DEMOS.block=function(host){tabs(host,{intro:'A transformer is attention plus a few supports, stacked. Tap each part.',tabs:[
+ {label:'Attention',text:'Each word looks at the other words\nand pulls in what matters.',say:'This is the star, and it mixes information between words.'},
+ {label:'Feed-forward',text:'Each word then gets processed alone\nby a small neural network.',say:'This does the "thinking" for each position after attention has mixed the context.'},
+ {label:'Skip links',text:'output = input + change\n\n(the input is added back)',say:'Residual links let signals and learning flow through many layers.'},
+ {label:'Stack',text:'block 1 -> block 2 -> ... -> block N\n\nSame recipe, repeated. Bigger models\nhave more blocks.',say:'Depth comes from repeating the same block.'}]})};
+
+DEMOS.kv=function(host){
+  var n=20,b,say=h('p',{class:'result','aria-live':'polite'});
+  function draw(){var no=n*(n+1)/2,yes=n;b.set([{label:'No cache',pct:100,val:no+' units'},{label:'With cache',pct:yes/no*100,val:yes+' units'}]);
+    say.textContent='Writing '+n+' words: without a cache the model redoes work for earlier words every time ('+no+' units). With a cache it does one new unit per word ('+yes+').'}
+  host.append(h('p',{class:'note',text:'Each new word needs the earlier words\' attention data. A KV cache keeps it instead of recomputing. "Units" are a simple count, not real time.'}));
+  b=bars(host);var c=ctl('kvn','Words written',5,100,1,n,function(v){return Math.round(v)},function(v){n=Math.round(v);draw()});host.append(c.row,say);draw();
+};
+
+DEMOS.sft=function(host){tabs(host,{intro:'Same question to a base model and to one after instruction tuning. The replies are illustrations.',tabs:[
+ {label:'Base model',text:'Prompt: What is the capital of France?\n\nReply: What is the capital of Germany? What\nis the capital of Spain? What is the\ncapital of Italy?',say:'A base model continues text. It does not know it was asked a question.'},
+ {label:'After SFT',text:'Prompt: What is the capital of France?\n\nReply: The capital of France is Paris.',say:'Trained on many question and answer examples, it now follows instructions.'},
+ {label:'Training data',text:'system: You are a helpful assistant.\nuser: What is the capital of France?\nassistant: The capital of France is Paris.',say:'Examples use roles. Learning is scored on the assistant\'s part only.'}]})};
+
+DEMOS.rlhf=function(host){flow(host,{stages:['Ask','Rank','Reward model','Tune','Guard'],steps:[
+ {at:0,say:'The model writes several answers to the same question.',box:'Answer A, Answer B, Answer C'},
+ {at:1,say:'People rank them. This is the human judgment you want to capture.',box:'B > A > C'},
+ {at:2,say:'A second model learns to predict those rankings. It becomes a scorer.',box:'reward model: A=0.4  B=0.9  C=0.1'},
+ {at:3,say:'The main model is trained to write answers that the scorer likes.',box:'policy trained to raise the score'},
+ {at:4,say:'A penalty keeps it close to the original model, so it cannot game the scorer with odd text.',box:'penalty if it drifts too far (reward hacking)'}]})};
+
+DEMOS.dpo=function(host){tabs(host,{intro:'Both start from people choosing the better answer of two.',tabs:[
+ {label:'RLHF path',text:'1. Tuned model (SFT)\n2. Reward model\n3. Policy trained with a loop (PPO)\n\nThree models, a delicate loop.',say:'It works, but it is heavy and can be unstable.'},
+ {label:'DPO path',text:'1. Tuned model (SFT)\n2. Train directly on pairs:\n   "prefer chosen over rejected"\n\nNo reward model, no loop.',say:'Simpler and cheaper, and often steadier to train.'},
+ {label:'Which',text:'Both are ways to teach "better".\nDPO has fewer moving parts.\nRLHF is the older, more flexible method.',say:'In interviews: say what each needs and why DPO is simpler.'}]})};
+
+DEMOS.quant=function(host){
+  var M=[['7B',7],['13B',13],['70B',70]],Q=[['16-bit',16],['8-bit',8],['4-bit',4]],mi=2,qi=0,b,say=h('p',{class:'result','aria-live':'polite'}),r1=h('div',{class:'chips'}),r2=h('div',{class:'chips'});
+  function draw(){r1.textContent='';r2.textContent='';
+    M.forEach(function(m,i){r1.append(h('button',{class:'chip',type:'button',text:m[0]+' model','aria-pressed':i===mi?'true':'false',onclick:function(){mi=i;draw()}}))});
+    Q.forEach(function(q,i){r2.append(h('button',{class:'chip',type:'button',text:q[0],'aria-pressed':i===qi?'true':'false',onclick:function(){qi=i;draw()}}))});
+    var gb=M[mi][1]*Q[qi][1]/8;b.set([{label:'Weights',pct:Math.min(100,gb/140*100),val:gb.toFixed(1)+' GB'}]);
+    var fit=gb<=8?'a laptop with 8 GB of fast memory':gb<=24?'one 24 GB gaming GPU':gb<=80?'one 80 GB data center GPU':'several 80 GB GPUs';
+    say.textContent='About '+gb.toFixed(1)+' GB for the weights alone. Fits on: '+fit+'.'}
+  host.append(h('p',{class:'note',text:'Memory for the weights is parameters times bytes each. Smaller numbers lose a little accuracy. Real use also needs memory for the cache and overhead.'}),r1,r2);b=bars(host);host.append(say);draw();
+};
+
+DEMOS.infopt=function(host){flow(host,{stages:['Prompt in','Prefill','Decode','Faster'],steps:[
+ {at:0,say:'You send a prompt. Generation has two phases.',box:'prompt: 2,000 tokens'},
+ {at:1,say:'Prefill reads the whole prompt at once. It is limited by raw compute.',box:'prefill: parallel, compute-bound'},
+ {at:2,say:'Decode writes one token at a time. Each step waits on memory, so it is limited by memory speed.',box:'decode: serial, memory-bound'},
+ {at:3,say:'Tricks help one phase or both: a KV cache skips repeated work, batching shares the GPU between users, and speculative decoding guesses several tokens at once.',box:'KV cache + batching + speculation'}]})};
+
+DEMOS.lora=function(host){
+  var r=8,d=4096,b,say=h('p',{class:'result','aria-live':'polite'});
+  function draw(){var full=d*d,l=2*r*d,pct=l/full*100;b.set([{label:'Full tuning',pct:100,val:(full/1e6).toFixed(1)+'M'},{label:'LoRA',pct:Math.max(pct,1.5),val:(l/1e6).toFixed(2)+'M'}]);
+    say.textContent='Rank '+r+': trains '+pct.toFixed(1)+'% of the numbers in this one weight block.'}
+  host.append(h('p',{class:'note',text:'One 4,096 by 4,096 block. LoRA freezes it and trains two thin matrices beside it. The rank is how thin.'}));
+  b=bars(host);var c=ctl('lorar','Rank',1,64,1,r,function(v){return Math.round(v)},function(v){r=Math.round(v);draw()});host.append(c.row,say);draw();
+};
+
+DEMOS.vllm=function(host){tabs(host,{intro:'Three ideas that make a serving engine fast. Tap each.',tabs:[
+ {label:'Paged memory',text:'KV cache stored in small blocks,\nlike pages in an operating system.\n\nNo big empty gaps. Less waste.',say:'More requests fit in the same GPU memory.'},
+ {label:'Continuous batching',text:'Old way: wait for the whole batch.\n\nNew way: when one request finishes,\nanother joins right away.',say:'The GPU is never idle waiting for the slowest request.'},
+ {label:'Chunked prefill',text:'A long prompt is read in slices,\nso users who are already getting\ntokens do not stall.',say:'It protects the smoothness of tokens for everyone else.'}]})};
+
+DEMOS.metrics2=function(host){sorter(host,{intro:'A chat app feels slow. Which measure does each complaint point to?',choices:['Time to first token','Speed per token','Total time'],end:'Look at percentiles (P50, P99), not averages. Goodput counts only requests that met all your targets.',items:[
+ {t:'You wait 1.2 seconds before the first word appears.',a:0,why:'Waiting to start is time to first token (TTFT): queue plus reading the prompt.'},
+ {t:'Words appear, then pause, then appear again.',a:1,why:'Uneven gaps between tokens show up in per-token speed.'},
+ {t:'A full answer takes 9 seconds.',a:2,why:'Start to finish is total, or end-to-end, time.'},
+ {t:'A long prompt sits in a queue.',a:0,why:'Queue time adds to the wait before the first token.'},
+ {t:'The first word came fast but the rest crawl.',a:1,why:'Decode speed per token is the problem.'}]})};
+
+DEMOS.route=function(host){
+  var p=60,b,say=h('p',{class:'result','aria-live':'polite'});
+  function draw(){var cost=(p/100*0.002+(1-p/100)*0.02);b.set([{label:'All frontier',pct:100,val:'$0.0200'},{label:'Your mix',pct:cost/0.02*100,val:'$'+cost.toFixed(4)}]);
+    say.textContent='Sending '+p+'% to the cheap model cuts the average cost per request by '+Math.round((1-cost/0.02)*100)+'%. Prices here are made up.'}
+  host.append(h('p',{class:'note',text:'A router sends easy requests to a cheap model and hard ones to a strong model. Slide the share that goes cheap.'}));
+  b=bars(host);var c=ctl('rt','Share to cheap model',0,100,5,p,function(v){return Math.round(v)+'%'},function(v){p=Math.round(v);draw()});host.append(c.row,say,h('p',{class:'note',text:'The catch: check quality continuously, so the cheap model does not quietly take requests it handles badly.'}));draw();
+};
+
+DEMOS.finops=function(host){sorter(host,{intro:'Which of these is a useful way to track AI spend?',choices:['Useful','Not very useful'],end:'Pick a unit that matches value, like cost per resolved ticket, and add limits: a rate limit, a spend cap, then a kill switch.',items:[
+ {t:'Cost per resolved support ticket.',a:0,why:'It ties spend to value delivered.'},
+ {t:'Total dollars last month, in one number.',a:1,why:'It does not say what drove it or what it bought.'},
+ {t:'Price per million tokens, by itself.',a:1,why:'A cheap token used badly can cost more than an expensive one used well.'},
+ {t:'Cost per report generated, per customer.',a:0,why:'It shows who drives spend and what they get.'},
+ {t:'Spend split into prompt, tools, memory and answer.',a:0,why:'It shows which part of a call costs the most.'}]})};
+
+DEMOS.hybrid=function(host){sorter(host,{intro:'Keyword search matches exact words. Meaning search matches ideas. Which finds each of these better?',choices:['Keyword search','Meaning search'],end:'Use both, then rerank the combined results with a stronger model.',items:[
+ {t:'Find error code E-4021.',a:0,why:'An exact string. Meaning search may return similar-looking codes.'},
+ {t:'Find pages about getting my money back (the docs say "refund").',a:1,why:'The words differ but the idea matches.'},
+ {t:'Find product SKU AB-1234.',a:0,why:'Exact identifiers are keyword territory.'},
+ {t:'"How do I cancel?" when the page says "terminate your subscription".',a:1,why:'Different words, same meaning.'},
+ {t:'A person\'s exact last name.',a:0,why:'Names are exact matches.'}]})};
+
+DEMOS.parse=function(host){sorter(host,{intro:'You pull text from PDFs before chunking. Should you fix each problem first?',choices:['Fix it first','Fine to leave'],end:'Clean text first. Chunking and search are only as good as the text you give them. (This is a common step, not a lesson in the course.)',items:[
+ {t:'The page header repeats on every page.',a:0,why:'It pollutes chunks with noise.'},
+ {t:'A table came out as scrambled words.',a:0,why:'The numbers lose their column labels, so answers go wrong.'},
+ {t:'Two columns were read straight across.',a:0,why:'Sentences from different columns get mixed together.'},
+ {t:'A normal paragraph with correct text.',a:1,why:'Nothing to fix.'},
+ {t:'A scanned page that gave no text at all.',a:0,why:'It needs optical character recognition (OCR) before anything else.'}]})};
+
+DEMOS.shell=function(host){tabs(host,{intro:'Three terminal skills you will use on remote machines. Tap each.',tabs:[
+ {label:'Search logs',text:'cat train.log | grep ERROR | tail -20\n\ngrep ERROR train.log > errors.txt',say:'Pipe commands together to filter big logs. A redirect saves the result to a file.'},
+ {label:'Keep running',text:'tmux new -s work\n  ... start the long job ...\n  (detach: Ctrl-b then d)\ntmux attach -t work',say:'tmux keeps a job running after you disconnect.'},
+ {label:'Reach other machines',text:'ssh me@server\nscp results.csv me@server:~/data/\nrsync -av data/ me@server:~/data/',say:'ssh logs in. scp and rsync copy files, and rsync only sends what changed.'}]})};
+
+DEMOS.stack=function(host){sorter(host,{intro:'Your setup has four layers. Which layer is each item in?',choices:['System','Packages','Runtime','AI library'],end:'Know the layer and you know where to look when something breaks.',items:[
+ {t:'The operating system and graphics driver.',a:0,why:'The base of everything.'},
+ {t:'pip or uv installing dependencies.',a:1,why:'It manages what code is installed.'},
+ {t:'Python 3.12.',a:2,why:'The language runtime your code runs on.'},
+ {t:'PyTorch.',a:3,why:'A library for AI work.'},
+ {t:'Node.js 20.',a:2,why:'Another runtime.'},
+ {t:'The CUDA GPU driver.',a:0,why:'A system-level piece that lets software use the GPU.'}]})};
 /* ================= WATCH: step-through animations ================= */
 WATCH.git={label:'An animated commit graph: a branch is created, gets a commit, and is merged back into main.',height:230,hold:3000,steps:[
  {say:'A repository starts with one commit on main.',cmd:'git commit -m "start"'},
@@ -2153,6 +2274,125 @@ lesson(14,{id:'delegate',short:'Delegate with isolation',title:'Parallel agents 
   quiz:[{q:'Two agents both edit one file. What happens?',o:['They collide', 'It goes faster', 'Nothing'],a:0,why:'Give the file to one owner.',hint:'Look at the collide card.'},
         {q:'When is delegating not worth it?',o:['For a tiny one-line fix', 'For ten independent jobs', 'For separate modules'],a:0,why:'Coordination costs more than the work.',hint:'Look at the small fix card.'}],
   links:[['Delegate with isolation',PH('14-agent-engineering/45-delegate-with-isolation')]]});
+/* ---- LLM concepts, serving, cost ---- */
+lesson(10,{id:'tokenizers',short:'Tokenizers',title:'The model reads pieces of words, not words',tag:'Behind Phase 10, lesson 1: Tokenizers',
+  lead:'A language model does not read text. It reads numbers for pieces of text called tokens. A tokenizer splits text into pieces from a learned vocabulary. Common words are one piece. Rare words break into several, which costs more and can confuse the model.',
+  demo:'tok',takeaway:'Vocabulary size is a trade-off: too small makes long sequences, too large wastes space. Different languages and code split differently, so cost and quality can differ.',
+  quiz:[{q:'Why does a rare word cost more?',o:['It splits into more pieces', 'It is longer to type', 'It is blocked'],a:0,why:'You pay per token, and rare words take several.',hint:'Try "zxqvj" and "the cat sat on the mat".'},
+        {q:'What does the model actually read?',o:['Numbers for tokens', 'Letters', 'Images of words'],a:0,why:'Each token has an ID.',hint:'Read the lead.'}],
+  links:[['Tokenizers',PH('10-llms-from-scratch/01-tokenizers')]]});
+
+lesson(7,{id:'transformer-block',short:'Transformer block',title:'Attention plus a few supports, stacked',tag:'Behind Phase 7, lesson 5: The Full Transformer',
+  lead:'Attention gets the attention, but a transformer block also has a small neural network for each word and skip links that carry the input forward. A big model is the same block repeated many times.',
+  demo:'block',takeaway:'You do not need the equations to explain it: attention mixes words, feed-forward processes each word, skip links keep learning stable, and the block repeats.',
+  quiz:[{q:'What does the feed-forward part do?',o:['Processes each word on its own after attention', 'Mixes words together', 'Stores the vocabulary'],a:0,why:'Attention mixes. Feed-forward then works per word.',hint:'Open the Feed-forward tab.'},
+        {q:'How do models get deeper?',o:['By repeating the same block', 'By new inventions each layer', 'By longer words'],a:0,why:'Same recipe, repeated.',hint:'Open the Stack tab.'}],
+  links:[['The full transformer',PH('07-transformers-deep-dive/05-full-transformer')]]});
+
+lesson(7,{id:'kv-cache',short:'KV cache',title:'Remember earlier work instead of redoing it',tag:'Behind Phase 7, lesson 12: KV Cache and Flash Attention',
+  lead:'To write each new word, the model needs attention data from every earlier word. Without a cache it recomputes all of it each time. A KV cache keeps that data, so each new word costs only a little. The cost is memory.',
+  demo:'kv',takeaway:'Training is parallel and compute-bound. Writing text is serial and memory-bound. The cache trades memory for speed.',
+  quiz:[{q:'What does a KV cache save?',o:['Repeated work on earlier words', 'The vocabulary', 'Training time'],a:0,why:'Earlier words are not recomputed.',hint:'Slide the words up.'},
+        {q:'What does it cost?',o:['Memory', 'Accuracy', 'Nothing'],a:0,why:'The saved data must be stored, and it grows with length.',hint:'Read the takeaway.'}],
+  links:[['KV cache and flash attention',PH('07-transformers-deep-dive/12-kv-cache-flash-attention')]]});
+
+lesson(10,{id:'sft',short:'Instruction tuning (SFT)',title:'From text predictor to assistant',tag:'Behind Phase 10, lesson 6: Instruction Tuning',
+  lead:'A base model only continues text. Supervised fine-tuning (SFT) shows it many examples of instructions and good answers, until it answers instead of rambling. Every chat model you use has gone through this step.',
+  demo:'sft',takeaway:"Base model: predicts the next token. After SFT: follows instructions. Training uses roles (system, user, assistant) and scores the assistant's part.",
+  quiz:[{q:'What does a base model do with a question?',o:['Continues the text', 'Answers it', 'Refuses it'],a:0,why:'It was trained to predict text, not to answer.',hint:'Open "Base model".'},
+        {q:'What data does SFT use?',o:['Examples of instructions and good answers', 'Random web text', 'Only images'],a:0,why:'Many example conversations.',hint:'Open "Training data".'}],
+  links:[['Instruction tuning (SFT)',PH('10-llms-from-scratch/06-instruction-tuning-sft')]]});
+
+lesson(10,{id:'rlhf',short:'RLHF',title:'Teach the model which answer is better',tag:'Behind Phase 10, lesson 7: RLHF',
+  lead:'SFT teaches format. It does not teach which of two good answers is better. RLHF collects human rankings, trains a reward model to predict them, then tunes the main model to score well, with a penalty so it does not wander off.',
+  demo:'rlhf',takeaway:'Three models are involved: the tuned model, a reward model and the policy being trained. The penalty guards against reward hacking.',
+  quiz:[{q:'What does the reward model learn?',o:['To predict which answer people prefer', 'To write answers', 'To translate'],a:0,why:'It turns rankings into a score.',hint:'Read the Reward model step.'},
+        {q:'Why the penalty for drifting?',o:['To stop it gaming the scorer', 'To save memory', 'To speed it up'],a:0,why:'Without it, the model finds odd text that scores high but is bad.',hint:'Read the last step.'}],
+  links:[['RLHF',PH('10-llms-from-scratch/07-rlhf')]]});
+
+lesson(10,{id:'dpo',short:'DPO',title:'Learn from preferences without a reward model',tag:'Behind Phase 10, lesson 8: DPO',
+  lead:'DPO uses the same human choices as RLHF, but trains directly on the pairs: prefer the chosen answer over the rejected one. No reward model and no delicate loop, so it is simpler and cheaper.',
+  demo:'dpo',takeaway:'Interview line: RLHF needs three models and a tricky loop. DPO needs two and is steadier.',
+  quiz:[{q:'What does DPO skip?',o:['The separate reward model', 'The data', 'The tuned model'],a:0,why:'It learns from pairs directly.',hint:'Compare the first two tabs.'},
+        {q:'Why might a team choose DPO?',o:['Fewer moving parts', 'It is always better', 'No data needed'],a:0,why:'Simpler and often more stable.',hint:'Read the last tab.'}],
+  links:[['DPO',PH('10-llms-from-scratch/08-dpo')]]});
+
+lesson(10,{id:'quantization',short:'Quantization',title:'Smaller numbers, smaller model',tag:'Behind Phase 10, lesson 11: Quantization',
+  lead:"A model's weights are numbers. Storing each one with fewer bits shrinks memory a lot, with a small accuracy cost. A 70B model at 16 bits needs about 140 GB. At 4 bits it needs about 35 GB.",
+  demo:'quant',takeaway:'Memory for weights is parameters times bytes each. Quantization lets bigger models fit smaller hardware, and the cost is usually a little accuracy.',
+  quiz:[{q:'A 70B model at 4 bits needs roughly how much for weights?',o:['About 35 GB', 'About 140 GB', 'About 3.5 GB'],a:0,why:'70 billion times half a byte each.',hint:'Pick 70B and 4-bit.'},
+        {q:'What is the trade-off?',o:['Less memory for a little accuracy', 'More memory for speed', 'None'],a:0,why:'Fewer bits lose some precision.',hint:'Read the note.'}],
+  links:[['Quantization',PH('10-llms-from-scratch/11-quantization')]]});
+
+lesson(10,{id:'inference-opt',short:'Faster inference',title:'Two phases, two bottlenecks',tag:'Behind Phase 10, lesson 12: Inference Optimization',
+  lead:'Generating text has two phases. Prefill reads your prompt in parallel and is limited by compute. Decode writes one token at a time and is limited by memory. Each speed-up trick targets one phase or both.',
+  demo:'infopt',takeaway:'Know the two phases and you can explain most serving tricks: KV cache, batching and speculative decoding.',
+  quiz:[{q:'Which phase is memory-bound?',o:['Decode', 'Prefill', 'Both equally'],a:0,why:'One token at a time waits on memory.',hint:'Read step 3.'},
+        {q:'What does batching do?',o:['Shares the GPU between users', 'Shortens the prompt', 'Trains the model'],a:0,why:'More requests use the GPU at once.',hint:'Read the last step.'}],
+  links:[['Inference optimization',PH('10-llms-from-scratch/12-inference-optimization')]]});
+
+lesson(11,{id:'lora',short:'LoRA',title:'Fine-tune a tiny add-on, not the whole model',tag:'Behind Phase 11, lesson 8: Fine-tuning with LoRA',
+  lead:'Fully fine-tuning a big model needs a lot of memory. LoRA freezes the model and trains two thin matrices beside each big one. You train a tiny fraction of the numbers and get close to full tuning quality. QLoRA does this on a 4-bit model.',
+  demo:'lora',takeaway:'Small adapters are cheap to train and store. They can be merged back into the model for deployment.',
+  quiz:[{q:'What does LoRA freeze?',o:['The original weights', 'The adapters', 'The data'],a:0,why:'Only the thin add-ons are trained.',hint:'Read the note.'},
+        {q:'What does a higher rank do?',o:['Trains more numbers, with more capacity', 'Makes it smaller', 'Nothing'],a:0,why:'A thicker add-on can learn more but costs more.',hint:'Slide the rank.'}],
+  links:[['Fine-tuning with LoRA',PH('11-llm-engineering/08-fine-tuning-lora')]]});
+
+lesson(17,{id:'vllm',short:'Serving with vLLM',title:'Why serving engines are fast',tag:'Behind Phase 17, lesson 4: vLLM Serving Internals',
+  lead:'A serving engine like vLLM stacks three ideas: store the cache in small blocks to avoid waste, let new requests join the batch the moment others finish, and read long prompts in slices so nobody stalls.',
+  demo:'vllm',takeaway:'Paged memory, continuous batching and chunked prefill together raise throughput. Check that features work together before turning everything on.',
+  quiz:[{q:'What does continuous batching fix?',o:['Waiting for the slowest request', 'Long prompts', 'Typos'],a:0,why:'New requests join as soon as space frees up.',hint:'Open "Continuous batching".'},
+        {q:'What does paged memory save?',o:['GPU memory', 'Disk', 'Money on tokens'],a:0,why:'No big empty gaps.',hint:'Open "Paged memory".'}],
+  links:[['vLLM serving internals',PH('17-infrastructure-and-production/04-vllm-serving-internals')]]});
+
+lesson(17,{id:'inference-metrics',short:'Serving metrics',title:'Measure speed the way users feel it',tag:'Behind Phase 17, lesson 8: Inference Metrics and Goodput',
+  lead:'Users feel three things: how long until the first word (time to first token), how smoothly the rest arrives (speed per token) and how long the whole answer takes. Averages hide bad cases, so look at percentiles such as P99.',
+  demo:'metrics2',takeaway:'Set targets for each measure together. Goodput counts only requests that met all targets.',
+  quiz:[{q:'Why not use the average?',o:['A few very slow requests hide in it', 'It is hard to compute', 'Averages are illegal'],a:0,why:'P99 shows the slow tail that users complain about.',hint:'Read the takeaway.'},
+        {q:'A long queue affects which measure?',o:['Time to first token', 'Speed per token', 'None'],a:0,why:'Queue time adds to the wait before the first word.',hint:'See the queue card.'}],
+  links:[['Inference metrics and goodput',PH('17-infrastructure-and-production/08-inference-metrics-goodput')]]});
+
+lesson(17,{id:'routing',short:'Model routing',title:'Send easy requests to a cheap model',tag:'Behind Phase 17, lesson 16: Model Routing',
+  lead:'Not every request needs the strongest model. A router checks each one (task type, length, how hard it looks) and sends simple ones to a cheap model and hard ones to a frontier model. This is also called a cascade.',
+  demo:'route',takeaway:'Blended cost drops fast, but watch quality continuously so the cheap model does not creep onto requests it handles badly.',
+  quiz:[{q:'What does a router decide?',o:['Which model handles each request', 'Which user to block', 'The prompt length'],a:0,why:'Easy goes cheap, hard goes strong.',hint:'Read the note.'},
+        {q:'What must you monitor?',o:['Quality on the cheap path', 'Only cost', 'Nothing'],a:0,why:'Otherwise quality can quietly slide.',hint:'Read the last note.'}],
+  links:[['Model routing',PH('17-infrastructure-and-production/16-model-routing')]]});
+
+lesson(17,{id:'finops',short:'FinOps for LLMs',title:'Track AI spend by what it buys',tag:'Behind Phase 17, lesson 27: FinOps for LLMs',
+  lead:'AI spend is token transactions, not servers. A single monthly number hides what drives it. Track cost per useful unit (a resolved ticket, a report) and split calls into prompt, tools, memory and answer. Add limits: rate limit, spend cap, kill switch.',
+  demo:'finops',takeaway:'Prompt design, context size and output length are money decisions. Measure cost per outcome, not just price per token.',
+  quiz:[{q:'Which is the better unit?',o:['Cost per resolved ticket', 'Total monthly dollars', 'Tokens per second'],a:0,why:'It ties spend to value.',hint:'Look at the Useful cards.'},
+        {q:'What is the last step of the limit ladder?',o:['A kill switch', 'A rate limit', 'A report'],a:0,why:'Rate limit, then spend cap, then kill switch.',hint:'Read the takeaway.'}],
+  links:[['FinOps for LLMs',PH('17-infrastructure-and-production/27-finops-llms')]]});
+
+lesson(11,{id:'hybrid-search',short:'Hybrid search',title:'Use exact-word search and meaning search together',tag:'Behind Phase 11, lesson 7: Advanced RAG',
+  lead:'Meaning search finds ideas but can miss exact strings like an error code. Keyword search (BM25) finds exact words but misses rewordings. Advanced RAG runs both, merges the results, then reranks them with a stronger model.',
+  demo:'hybrid',takeaway:'Use both. Also try rewriting vague questions, and diagnose misses: wrong chunk, answer not in context, or a question that needs several hops.',
+  quiz:[{q:'Which finds "error E-4021" better?',o:['Keyword search', 'Meaning search', 'Neither'],a:0,why:'Exact strings are what keywords are for.',hint:'Look at the first card.'},
+        {q:'What does a reranker do?',o:['Re-orders the merged results by relevance', 'Writes the answer', 'Splits documents'],a:0,why:'A stronger model sorts the shortlist.',hint:'Read the lead.'}],
+  links:[['Advanced RAG',PH('11-llm-engineering/07-advanced-rag')]]});
+
+lesson(11,{id:'doc-parsing',short:'Document parsing',title:'Clean the text before you chunk it',tag:'Beyond the course: getting text out of documents',
+  lead:'Real documents are messy. Headers repeat on every page, tables scramble, columns get read straight across, and scans have no text at all. Fix these before chunking, because search quality depends on the text you feed it.',
+  demo:'parse',takeaway:'Garbage in, garbage out. Check what your parser actually produced before you build search on it.',
+  quiz:[{q:'A table came out as scrambled words. Why does that matter?',o:['Numbers lose their column labels', 'It only looks ugly', 'Nothing'],a:0,why:'Answers may use the wrong number.',hint:'Look at the table card.'},
+        {q:'A scan returned no text. What is needed?',o:['OCR', 'A bigger model', 'Nothing'],a:0,why:'OCR reads text from images.',hint:'Look at the scanned page card.'}],
+  links:[['Advanced RAG (chunking and structure)',PH('11-llm-engineering/07-advanced-rag')]]});
+
+lesson(0,{id:'terminal',short:'Terminal skills',title:'The few commands you will use daily',tag:'Behind Phase 0, lesson 10: Terminal and Shell',
+  lead:'Remote work lives in the terminal. Three skills go a long way: filtering logs with pipes and grep, keeping long jobs alive with tmux, and moving files with ssh, scp and rsync.',
+  demo:'shell',takeaway:'Pipes chain commands. tmux survives disconnects. rsync copies only what changed.',
+  quiz:[{q:'What does tmux give you?',o:['A session that keeps running after you disconnect', 'Faster code', 'A GPU'],a:0,why:'Long jobs survive a dropped connection.',hint:'Open "Keep running".'},
+        {q:'What does a pipe (|) do?',o:["Sends one command's output into the next", 'Deletes files', 'Starts the GPU'],a:0,why:'It chains commands together.',hint:'Open "Search logs".'}],
+  links:[['Terminal and shell',PH('00-setup-and-tooling/10-terminal-and-shell')]]});
+
+lesson(0,{id:'dev-stack',short:'Dev environment',title:'Four layers, so you know where to look',tag:'Behind Phase 0, lesson 1: Dev Environment',
+  lead:'Your setup is four layers: the system (OS and drivers), packages (pip or uv), runtimes (Python, Node) and AI libraries (PyTorch and others). When something breaks, knowing the layer tells you where to look.',
+  demo:'stack',takeaway:'Set it up once, properly, and check it with the verify script from the first lesson.',
+  quiz:[{q:'Python 3.12 is in which layer?',o:['Runtime', 'System', 'AI library'],a:0,why:'It is the language runtime.',hint:'Look at the runtime cards.'},
+        {q:'PyTorch is in which layer?',o:['AI library', 'System', 'Packages'],a:0,why:'It is a library for AI work.',hint:'Look at the AI library card.'}],
+  links:[['Dev environment',PH('00-setup-and-tooling/01-dev-environment')]]});
 /* ================= GLOSSARY ================= */
 /* One entry per term. pat = regex source that finds it in lesson text (omit for glossary-only terms). */
 var GLOSSARY=[
@@ -2235,6 +2475,15 @@ var GLOSSARY=[
  {id:'harness',term:'harness',pat:'harness',def:'The code around a model that runs the loop, tools, memory and checks. It is what turns a model into an agent.'},
  {id:'promptinj',term:'prompt injection',pat:'prompt injection|injection',def:'Hidden instructions in content an agent reads (a web page, email, file) that try to make it do something the user did not ask for.'},
  {id:'workbench',term:'workbench',pat:'workbench',def:'The files and checks around an agent: instructions, state, scope, feedback, verification, review and handoff.'},
+ {id:'tokenizer',term:'tokenizer',pat:'tokenizers?',def:'The part that splits text into pieces (tokens) and turns them into numbers the model can read.'},
+ {id:'kvcache',term:'KV cache',pat:'KV cache',def:'Saved attention data for earlier words, so the model does not recompute it for every new word. It trades memory for speed.'},
+ {id:'sft',term:'SFT (supervised fine-tuning)',pat:'SFT|instruction tuning',def:'Training a base model on examples of instructions and good answers so it follows instructions.'},
+ {id:'rlhf',term:'RLHF',pat:'RLHF',def:'Reinforcement learning from human feedback: people rank answers, a reward model learns the ranking, and the model is tuned to score well.'},
+ {id:'dpo',term:'DPO',pat:'DPO',def:'Direct preference optimization: train directly on pairs of better and worse answers, with no separate reward model.'},
+ {id:'quant',term:'quantization',pat:'quantization|quantize',def:'Storing a model\'s numbers with fewer bits so it needs less memory, at a small cost in accuracy.'},
+ {id:'lora',term:'LoRA',pat:'LoRA|QLoRA',def:'A cheap way to fine-tune: freeze the model and train two thin matrices beside each big one.'},
+ {id:'ttft',term:'time to first token',pat:'time to first token|TTFT',def:'How long you wait before the first word of an answer appears.'},
+ {id:'bm25',term:'BM25 (keyword search)',pat:'BM25',def:'A classic search method that ranks documents by the exact words they share with the query.'},
  {id:'curl',term:'curl',pat:'curl',def:'A command-line tool that downloads from a URL. Setup lines like "curl -LsSf <url> | sh" download an installer and run it. The flags mean: follow redirects (L), stay quiet (s), still show errors (S), and fail on server errors (f). Only run "| sh" lines from sources you trust.'},
  {id:'uv',term:'uv',pat:'uv',def:'A fast tool that installs Python versions, creates virtual environments and installs packages. The course uses it instead of plain pip.'},
  {id:'cuda',term:'CUDA',pat:'CUDA',def:'NVIDIA\'s system for running code on its GPUs. PyTorch uses it when you have an NVIDIA card.'},
