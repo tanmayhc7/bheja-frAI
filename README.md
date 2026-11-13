@@ -13,6 +13,7 @@ Each lesson has a short animation or video, a live demo, and a two-question quiz
 - Phase 2, ML Fundamentals: precision and recall.
 - Phase 11, LLM Engineering: the context window, search by meaning, chunking, RAG, fast search (HNSW), agentic RAG, hallucinations, JSON output, tool calling, reading failures.
 - Phase 17, Infrastructure and Production: what tokens cost.
+- Starter lessons for every other phase: backpropagation (3), images as numbers (4), counting words (5), sound waves (6), attention (7), diffusion (8), trial and reward (9), next-word prediction (10), pictures and words (12), MCP (13), the agent loop (14), approval gates (15), orchestrator and workers (16), layers of defense (18), what a finished project has (19).
 - A glossary of plain-language terms, linked from the lessons.
 - A map of all 20 phases and a "where to start" guide from the source README.
 
