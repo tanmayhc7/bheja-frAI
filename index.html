@@ -170,6 +170,17 @@ button.pxc{cursor:pointer}
 .tin{font:500 16px var(--f-body);padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);min-height:44px;width:100%}
 .check{display:flex;gap:10px;align-items:flex-start;min-height:44px;padding:6px 0}
 .check input{width:22px;height:22px;margin-top:2px;accent-color:var(--accent);flex:none}
+.srt{display:grid;gap:10px;margin:8px 0}
+.srt .card{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface)}
+.srt .card.ok{border-color:var(--go);background:var(--go-soft)}
+.srt .card.no{border-color:var(--bad);background:var(--bad-soft)}
+.srt .q{margin:0 0 8px;font-weight:600}
+.srt .why{margin:8px 0 0;font-size:.9375rem}
+.cells{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}
+.cells .c{border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:500 13px var(--f-mono);background:var(--surface)}
+.cells .c.p{background:var(--go-soft);border-color:var(--go)}
+.cells .c.f{background:var(--bad-soft);border-color:var(--bad)}
+.cells .c.new{outline:2px solid var(--bad)}
 .fa{background:var(--well);border-radius:14px;padding:4px 16px}
 .fa summary{cursor:pointer;font-weight:600;padding:12px 0;min-height:44px;display:flex;align-items:center}
 .fstep{border-top:1px solid var(--line);padding:14px 0;display:grid;gap:10px;min-width:0}
@@ -1140,6 +1151,129 @@ DEMOS.cap=function(host){
   host.append(h('p',{class:'note',text:'A capstone is one complete project. Tick what yours has.'}),list);b=bars(host);host.append(say);draw();
 };
 
+/* ---- generic helpers for the forward deployed lessons ---- */
+function sorter(host,def){
+  var done=[],box=h('div',{class:'srt'}),score=h('p',{class:'result','aria-live':'polite'});
+  function draw(){
+    box.textContent='';var right=0,n=0;
+    def.items.forEach(function(it,i){
+      var st=done[i],card=h('div',{class:'card'+(st===undefined?'':(st===it.a?' ok':' no'))});
+      card.append(h('p',{class:'q',text:it.t}));
+      var row=h('div',{class:'chips'});
+      def.choices.forEach(function(c,k){row.append(h('button',{class:'chip',type:'button',text:c,'aria-pressed':st===k?'true':'false',disabled:st!==undefined,onclick:function(){done[i]=k;draw()}}))});
+      card.append(row);
+      if(st!==undefined){n++;if(st===it.a)right++;card.append(h('p',{class:'why',text:(st===it.a?'Right. ':'Not quite. Answer: '+def.choices[it.a]+'. ')+it.why}))}
+      box.append(card);
+    });
+    score.textContent=n===def.items.length?(right+' of '+n+' right. '+def.end):(n?right+' of '+n+' right so far.':'');
+  }
+  host.append(h('p',{class:'note',text:def.intro}),box,score);draw();
+}
+function tabs(host,def){
+  var cur=0,row=h('div',{class:'chips'}),pre=h('pre',{class:'pf'}),say=h('p',{class:'result','aria-live':'polite'});
+  function draw(){row.textContent='';def.tabs.forEach(function(t,i){row.append(h('button',{class:'chip',type:'button',text:t.label,'aria-pressed':i===cur?'true':'false',onclick:function(){cur=i;draw()}}))});
+    pre.textContent=def.tabs[cur].text;say.textContent=def.tabs[cur].say}
+  host.append(h('p',{class:'note',text:def.intro}),row,pre,say);draw();
+}
+var _chk=0;
+function checks(host,def){
+  var id=++_chk,done=def.items.map(function(){return false}),b,say=h('p',{class:'result','aria-live':'polite'}),list=h('div');
+  function draw(){var n=done.filter(Boolean).length;b.set([{label:def.label,pct:n/def.items.length*100,val:n+'/'+def.items.length}]);say.textContent=def.say(done,n)}
+  def.items.forEach(function(it,i){var cb=h('input',{type:'checkbox',id:'ck'+id+'_'+i});cb.addEventListener('change',function(){done[i]=cb.checked;draw()});
+    list.append(h('label',{class:'check',for:'ck'+id+'_'+i},cb,h('span',null,h('strong',{text:it[0]}),h('br'),h('span',{class:'note',text:it[1]}))))});
+  host.append(h('p',{class:'note',text:def.intro}),list);b=bars(host);host.append(say);draw();
+}
+
+DEMOS.outcome=function(host){sorter(host,{intro:'For each line, is it an output (a thing you build) or an outcome (a change in someone\'s work)?',choices:['Output','Outcome'],end:'Start from the outcome. The output can change; the outcome is what you are paid to deliver.',items:[
+ {t:'Build an incident assistant.',a:0,why:'It names a thing to build. It does not say who is helped or what improves.'},
+ {t:'On-call engineers find the failing service within two minutes.',a:1,why:'It says who, what improves and how you would know.'},
+ {t:'Add a chatbot to the app.',a:0,why:'A chatbot is one possible answer, not the goal.'},
+ {t:'Customers get a refund answer without waiting a day.',a:1,why:'You could meet it with software, a rule change or a template.'},
+ {t:'Launch a dashboard.',a:0,why:'Nobody asked for a dashboard. They asked for something to get better.'},
+ {t:'Fewer support tickets are reopened.',a:1,why:'It is something you can measure before and after.'}]})};
+
+DEMOS.workflow=function(host){tabs(host,{intro:'A support lead says: "We read each email and reply." Tap each view.',tabs:[
+ {label:'What they said',text:'"We read each email, check the order,\nand write a reply."\n\nThis is a summary. It is what people\nbelieve they do.',say:'Useful, but it leaves out the messy middle.'},
+ {label:'What you saw',text:'Watching 20 emails:\n- Copies the order number into 3 tools\n- Asks a coworker about refund rules\n- Keeps a private sheet of exceptions',say:'These are real steps. The friction and the hidden notes are where the value is.'},
+ {label:'Not sure yet',text:'Told to you, not seen:\n- "Refunds over $100 need a manager."\n\nWho approves it? In what tool?\nWrite it down as UNCONFIRMED.',say:'Keep unsure claims visible. Do not turn a guess into a requirement.'}]})};
+
+DEMOS.assume=function(host){sorter(host,{intro:'You plan an AI that drafts replies to support emails. For each assumption, test it first or let it wait?',choices:['Test this first','Can wait'],end:'Test what is risky, unknown and hard to undo. Leave the cheap, reversible things.',items:[
+ {t:'The order data can be read through an API.',a:0,why:'If this is false the whole idea fails, and you do not know yet.'},
+ {t:'The reply box can use the company blue.',a:1,why:'Cheap to change later and does not affect whether the idea works.'},
+ {t:'Replies can go out with no person checking.',a:0,why:'Mistakes would reach customers and cannot be taken back.'},
+ {t:'The refund rules are written down somewhere.',a:0,why:'The draft is only as good as the rules it follows. If they live in someone\'s head, you need to know now.'},
+ {t:'The button text can be changed later.',a:1,why:'Reversible and low impact.'}]})};
+
+DEMOS.slice=function(host){
+  var F=[['Read one real email',1,true],['Look up the order',2,true],['Draft a reply for a person to edit',2,true],['Send replies automatically',3,false],['A nice dashboard',4,false],['Support 12 languages',5,false]],on=F.map(function(){return false}),list=h('div'),say=h('p',{class:'result','aria-live':'polite'}),b;
+  function draw(){var days=0,got=0,extra=0;F.forEach(function(f,i){if(on[i]){days+=f[1];if(f[2])got++;else extra++}});
+    b.set([{label:'Days',pct:days/17*100,val:days+' d'},{label:'Learns',pct:got/3*100,val:got+'/3'}]);
+    say.textContent=!days?'Pick the pieces of your first build.':got<3?'Missing a piece the question needs. This slice cannot tell you if a draft saves time.':extra?'It answers the question, but "'+F.filter(function(f,i){return on[i]&&!f[2]})[0][0]+'" adds work and risk the question does not need.':days<=5?'A good slice: small, and it answers "does a draft save the agent time?"':'It works but is bigger than it needs to be.'}
+  F.forEach(function(f,i){var cb=h('input',{type:'checkbox',id:'sl'+i});cb.addEventListener('change',function(){on[i]=cb.checked;draw()});list.append(h('label',{class:'check',for:'sl'+i},cb,h('span',null,h('strong',{text:f[0]}),h('span',{class:'note',text:'  ('+f[1]+(f[1]>1?' days)':' day)')}))))});
+  host.append(h('p',{class:'note',text:'Question to answer: can a drafted reply save an agent time without mistakes? Choose your first build.'}),list);b=bars(host);host.append(say);draw();
+};
+
+DEMOS.spec=function(host){sorter(host,{intro:'A spec says what is fixed and what the agent may decide. Sort each line.',choices:['Locked','Bounded','Agent decides'],end:'Lock what is costly or public. Leave the cheap, reversible choices to the agent.',items:[
+ {t:'Never email a customer unless a person approved it.',a:0,why:'A mistake here reaches a customer and cannot be undone.'},
+ {t:'Drafts are between 80 and 150 words.',a:1,why:'A range: the agent picks inside it.'},
+ {t:'Variable names in the code.',a:2,why:'Cheap to change, so leave it to the agent.'},
+ {t:'Refunds over $100 need a manager.',a:0,why:'A business rule with real consequences.'},
+ {t:'Which library parses the emails.',a:2,why:'Reversible. Only the tests need to pass.'},
+ {t:'Tests must pass before anything is merged.',a:0,why:'This is the proof, so it cannot be skipped.'}]})};
+
+DEMOS.metrics=function(host){sorter(host,{intro:'Goal: find the failing service faster without making anything less safe. Sort each measure.',choices:['Outcome','Guardrail','Just activity'],end:'Pick the few that answer a decision. A dashboard of activity does not.',items:[
+ {t:'Minutes to find the right service.',a:0,why:'It is the change you wanted.'},
+ {t:'Share of actions that stayed read-only.',a:1,why:'It protects against making things worse while chasing the goal.'},
+ {t:'Number of times the assistant was opened.',a:2,why:'Use is not the same as help.'},
+ {t:'Share of suggested services that were correct.',a:0,why:'Fast but wrong is not a win.'},
+ {t:'Alerts dismissed without being read.',a:1,why:'A warning sign that the tool is creating noise.'},
+ {t:'Messages the model wrote.',a:2,why:'Volume says nothing about value.'}]})};
+
+DEMOS.stage=function(host){sorter(host,{intro:'Which stage fits? A prototype tests an idea, a pilot tests it with real people under control, production means people depend on it.',choices:['Prototype','Pilot','Production'],end:'Pick the stage that answers the current question with the least consequence.',items:[
+ {t:'You do not know if the idea works. One person will try it on fake emails today.',a:0,why:'Fake data, no real consequence. Cheap to throw away.'},
+ {t:'The idea looks good. Five support agents will use it for two weeks and check every draft.',a:1,why:'Real users and real data, with limited access and a person watching.'},
+ {t:'Customers rely on it daily and it needs monitoring and a rollback plan.',a:2,why:'Now it needs on-call, alerts and a way back.'},
+ {t:'You want to see if the model can read the email format at all.',a:0,why:'A small experiment is enough.'},
+ {t:'A real team uses it with limited access, and you review the results weekly.',a:1,why:'Controlled exposure to real work.'},
+ {t:'The pilot worked. Now it is rolling out to the whole company.',a:2,why:'Production needs the operations to match the reach.'}]})};
+
+DEMOS.ratchet=function(host){flow(host,{stages:['Signal','Route','Fix','Keep it','Retire'],steps:[
+ {at:0,say:'A signal arrives: the draft quoted the wrong refund policy.',box:'Signal: agent correction\n"This draft says 30 days. It is 14."'},
+ {at:1,say:'Decide where it belongs: missing context, a missing test, a rule, a runtime change, or the backlog?',box:'Missing context?  yes, old policy file\nMissing test?     yes\nRule needed?      no'},
+ {at:2,say:'Make a change and give it an owner.',box:'Owner: Priya\n1. Update the policy file\n2. Add this case to the test set'},
+ {at:3,say:'The test now runs on every change, so the mistake cannot return unseen.',box:'Test set: 41 cases -> 42\nRuns before every release'},
+ {at:4,say:'Give each control an end condition, or the pile of rules grows forever.',box:'Retire the old-policy check when the\nold file is deleted from every source.'}]})};
+
+DEMOS.regress=function(host){
+  var C=['refund date','tone','order id','language','VAT','long email','spam','empty body'],A=[1,1,0,1,0,1,1,0],B=[1,1,1,1,1,0,1,0],cur='A',grid=h('div',{class:'cells'}),say=h('p',{class:'result','aria-live':'polite'}),row=h('div',{class:'chips'});
+  function draw(){
+    row.textContent='';['A','B'].forEach(function(v){row.append(h('button',{class:'chip',type:'button','aria-pressed':cur===v?'true':'false',text:'Prompt '+v+(v==='A'?' (old)':' (new)'),onclick:function(){cur=v;draw()}}))});
+    grid.textContent='';var S=cur==='A'?A:B,pass=S.reduce(function(a,c){return a+c},0),broke=0;
+    C.forEach(function(n,i){var nw=cur==='B'&&A[i]&&!B[i];if(nw)broke++;grid.append(h('div',{class:'c '+(S[i]?'p':'f')+(nw?' new':''),text:(S[i]?'pass ':'FAIL ')+n}))});
+    say.textContent=cur==='A'?'Old prompt: '+pass+' of 8 pass.':'New prompt: '+pass+' of 8 pass, up from 5. But '+broke+' case that used to pass now fails (outlined: "'+C[5]+'"). Only a saved test set shows that.';
+  }
+  host.append(h('p',{class:'note',text:'The same 8 saved test cases run against each version of the prompt.'}),row,grid,say);draw();
+};
+
+DEMOS.prodapp=function(host){checks(host,{intro:'Tick what your first real feature has before people use it.',label:'Ready',items:[
+ ['A test set with a pass rate','Before you tune anything.'],['Answers backed by sources','So people can check them.'],['Checks on what goes in and what comes out','Guardrails on both sides.'],['Limits on time, retries and cost','So one bad request cannot run away.'],['A fallback when the model is down','A second model or a clear message.'],['Logs of cost, speed and failures','So you can see problems.'],['A way to turn it off quickly','A switch, not a redeploy.']],
+ say:function(d,n){return n===7?'This is ready for a small, watched rollout.':(!d[0]&&n>=3)?'Most people skip the test set. Everything else is guessing without it.':(!d[6]&&n>=5)?'Add the off switch. It is the cheapest safety net.':(7-n)+' to go.'}})};
+
+DEMOS.canary=function(host){flow(host,{stages:['Shadow','1%','10%','25%','50%','100%'],steps:[
+ {at:0,say:'Shadow mode: the new model sees real requests but users never see its answers.',box:'old model: $0.010 per request\nnew model: $0.014 per request (+40%)\nusers affected: nobody'},
+ {at:0,say:'Cost jumped before any user was affected. Fix the long prompt, run shadow again.',box:'after fix: $0.011 per request (+10%)'},
+ {at:1,say:'1% of real traffic. Watch speed, cost, errors, refusals and thumbs-down.',box:'latency  ok\ncost     ok\nerrors   ok\nthumbs-down  3.1% (was 3.0%)'},
+ {at:2,say:'10% of traffic. Still inside the limits, so go on.',box:'all five checks pass'},
+ {at:3,say:'25%: thumbs-down climbs. The gate stops the rollout.',box:'thumbs-down  11.2% (was 3.0%)\nGATE FAILED'},
+ {at:3,say:'Roll back by flipping a switch. Seconds, not a redeploy.',box:'flag: model = old\ntraffic on new model: 0%'}]})};
+
+DEMOS.okf=function(host){sorter(host,{intro:'OKF (Open Knowledge Format) keeps exact facts as small, linked Markdown files that an agent reads by name. RAG searches big piles of text. Which fits each?',choices:['Curated files (OKF)','Search (RAG)'],end:'Many real systems use both: files for exact facts, search for the big messy pile.',items:[
+ {t:'The exact definition of "weekly active users".',a:0,why:'A small, stable fact that must be exact. One named file beats a search that might return a near match.'},
+ {t:'10,000 support tickets that change every day.',a:1,why:'Too big and too fast-changing to write up by hand. Search finds the relevant ones.'},
+ {t:'A table\'s columns and how it joins to other tables.',a:0,why:'Structured, stable and reused often. Links between files show the joins.'},
+ {t:'A library of PDF contracts.',a:1,why:'Large and unstructured. Parse them, chunk them, then search.'},
+ {t:'A refund rule that must never be paraphrased.',a:0,why:'High stakes. A file you can read and review is safer than a similar-looking chunk.'},
+ {t:'Last week\'s server logs.',a:1,why:'Huge, changing, and only a few lines matter for each question.'}]})};
 /* ================= WATCH: step-through animations ================= */
 WATCH.git={label:'An animated commit graph: a branch is created, gets a commit, and is merged back into main.',height:230,hold:3000,steps:[
  {say:'A repository starts with one commit on main.',cmd:'git commit -m "start"'},
@@ -1501,6 +1635,91 @@ lesson(19,{id:'capstone',short:'A finished project',title:'What a finished proje
         {q:'Which is the stronger portfolio?',o:['One finished project with a live link and results','Five unfinished experiments','A list of courses taken'],a:0,why:'A finished, measured project is evidence you can deliver.',hint:'Read the takeaway.'}],
   links:[['Capstone projects',PH('19-capstone-projects')],['Production RAG chatbot',PH('19-capstone-projects/08-production-rag-chatbot')]]});
 
+/* ---- forward deployed route ---- */
+lesson(14,{id:'outcome',short:'Outcome first',title:'Start with the outcome, not the thing to build',tag:'Behind Phase 14, lesson 47: Outcomes Before Output',
+  lead:'"Build an assistant" names something to build. It does not say who it helps or what gets better. An outcome says who, in what situation, and what changes. Fast building makes picking the wrong target more costly.',
+  demo:'outcome',takeaway:'Write one sentence with the user, the situation, what happens today, the change you want, the limits, and what is out of scope. If it names a solution, rewrite it.',
+  quiz:[{q:'Which one is an outcome?',o:['Fewer support tickets are reopened','Build a chatbot','Launch a dashboard'],a:0,why:'It is a change you can measure. The others are things to build.',hint:'Ask: does it say what gets better?'},
+        {q:'Why avoid naming the solution in the first sentence?',o:['It keeps you open to a cheaper or simpler answer','Solutions are always wrong','Customers do not like software'],a:0,why:'The same outcome might be met by a template or a rule change.',hint:'Think about a runbook instead of an app.'}],
+  links:[['Outcomes before output',PH('14-agent-engineering/47-outcomes-before-output')]]});
+
+lesson(14,{id:'workflow',short:'Real workflow',title:'Find out what people actually do',tag:'Behind Phase 14, lesson 48: Discover the Real Workflow',
+  lead:'People describe their work as a tidy summary. Real work has workarounds, handoffs and private notes. Watch it, write down each step, and mark what you saw separately from what you were only told.',
+  demo:'workflow',takeaway:'Requirements are hiding in actions and workarounds. Keep "seen", "told" and "unsure" apart, so a guess never quietly becomes a requirement.',
+  quiz:[{q:'You were told refunds over $100 need a manager, but never saw it. What do you do?',o:['Record it as unconfirmed and check it','Build it as a rule','Ignore it'],a:0,why:'It might be true. Mark it unconfirmed until you see it.',hint:'Open the "Not sure yet" tab.'},
+        {q:'Why is a private spreadsheet of exceptions interesting?',o:['It shows a need the official process misses','It is a rule violation','It is not important'],a:0,why:'Workarounds point to friction an AI feature could remove.',hint:'Open the "What you saw" tab.'}],
+  links:[['Discover the real workflow',PH('14-agent-engineering/48-discover-the-real-workflow')]]});
+
+lesson(14,{id:'assumptions',short:'Assumptions and risk',title:'List what must be true, then test the risky parts',tag:'Behind Phase 14, lesson 49: Map Assumptions and Risk',
+  lead:'A plan hides guesses. Write each guess as an assumption. Then score how much it matters, how unsure you are, and how hard it is to undo. Test the risky ones first.',
+  demo:'assume',takeaway:'Choose your next experiment by risk, not by what is exciting. When an assumption is tested, replace it with evidence.',
+  quiz:[{q:'Which assumption should you test first?',o:['Order data can be read through an API','The button can be blue','The logo fits the header'],a:0,why:'If it is false, the whole idea fails. The other two are cheap to change.',hint:'Which one would break everything if wrong?'},
+        {q:'What makes an assumption high risk?',o:['It matters a lot, you are unsure, and it is hard to undo','It is long','It was said in a meeting'],a:0,why:'Impact, uncertainty and irreversibility are scored separately.',hint:'Think about replies that reach customers.'}],
+  links:[['Map assumptions and risk',PH('14-agent-engineering/49-map-assumptions-and-risk')]]});
+
+lesson(14,{id:'smallest-slice',short:'Smallest slice',title:'Build the smallest piece that teaches you something',tag:'Behind Phase 14, lesson 50: Choose the Smallest Testable Slice',
+  lead:'Small is only good if it proves something. A tiny build that cannot change your next decision is just unfinished. Pick the smallest piece that includes the risky part of the real workflow.',
+  demo:'slice',takeaway:'Choose a slice by the question it answers. Prefer changes you can reverse, and leave out features that do not help answer the question.',
+  quiz:[{q:'You build only "A nice dashboard". What is wrong?',o:['It does not answer the question you care about','It is too small','Dashboards are hard'],a:0,why:'A slice has to include the part that tests the idea.',hint:'Pick only the dashboard and read the message.'},
+        {q:'Why leave out "Send replies automatically" in the first slice?',o:['It adds risk without answering the question','Sending is impossible','It is too cheap'],a:0,why:'Real consequences before you have evidence are not worth it.',hint:'Add it and read the message.'}],
+  links:[['Choose the smallest testable slice',PH('14-agent-engineering/50-choose-the-smallest-testable-slice')]]});
+
+lesson(14,{id:'specs',short:'Specs',title:'A spec sets boundaries, not every step',tag:'Behind Phase 14, lesson 51: Specifications That Preserve Judgment',
+  lead:'A good spec fixes the things that must not change, gives ranges for some choices, and leaves cheap, reversible decisions to the person or agent building it. It is a decision boundary, not a script.',
+  demo:'spec',takeaway:'Lock what is risky or public. Bound what has a sensible range. Delegate what is cheap to change. Always say how you will check the result.',
+  quiz:[{q:'Which belongs in the "Locked" group?',o:['Never email a customer without approval','Variable names','Which library to use'],a:0,why:'A mistake reaches a customer and cannot be undone.',hint:'Which one has real consequences?'},
+        {q:'Why leave variable names to the agent?',o:['It is cheap and easy to change','Names do not matter at all','A spec cannot include them'],a:0,why:'Spending your attention on cheap choices wastes it.',hint:'How costly is a wrong name?'}],
+  links:[['Specifications that preserve judgment',PH('14-agent-engineering/51-write-specifications-that-preserve-judgment')]]});
+
+lesson(11,{id:'eval-set',short:'Evaluation',title:'Test your prompt like you test code',tag:'Behind Phase 11, lesson 10: Evaluation',
+  lead:'Reading ten outputs and saying "looks good" is hope, not evaluation. Save a fixed set of test cases, score every version of your prompt the same way, and re-run the set each time you change anything.',
+  demo:'regress',takeaway:'A saved test set shows what a change fixed and what it broke. Build the set before you tune the prompt.',
+  quiz:[{q:'The new prompt scores higher overall. Is it safe to ship?',o:['Not yet: check what it broke','Yes, higher is better','Only if it is shorter'],a:0,why:'A higher total can hide a case that used to pass and now fails.',hint:'Switch to Prompt B and look for the outline.'},
+        {q:'When should you build the test set?',o:['Before you tune the prompt','After launch','Never, trust your eyes'],a:0,why:'Otherwise you tune to the examples you happened to look at.',hint:'Read the takeaway.'}],
+  links:[['Evaluation',PH('11-llm-engineering/10-evaluation')]]});
+
+lesson(11,{id:'production-app',short:'Production app',title:'What a real feature needs before people use it',tag:'Behind Phase 11, lesson 13: Production App',
+  lead:'A demo works once. A real feature also needs tests, sources, checks on both sides of the model, limits, a fallback, logs and an off switch. This lesson puts the earlier ideas together.',
+  demo:'prodapp',takeaway:'Wire the pieces together and make it safe to fail: limits, a fallback, logs, and a switch to turn it off.',
+  quiz:[{q:'What is the cheapest safety net on the list?',o:['A way to turn it off quickly','A bigger model','A longer prompt'],a:0,why:'A switch lets you stop a problem while you fix it.',hint:'Tick everything except that one and read the message.'},
+        {q:'The model provider has an outage. What helps most?',o:['A fallback model or a clear message','Retry forever','Nothing, it is out of your hands'],a:0,why:'Users should see a working answer or a clear message, not an error.',hint:'Look at the list.'}],
+  links:[['Production app',PH('11-llm-engineering/13-production-app')]]});
+
+lesson(14,{id:'success-metrics',short:'Success metrics',title:'Decide how you will measure it before you build',tag:'Behind Phase 14, lesson 52: Design Success Metrics',
+  lead:'Start with the goal, turn it into questions, then pick the fewest numbers that answer them. Pair each outcome number with a guardrail number that catches harm. Decide the targets before you see the results.',
+  demo:'metrics',takeaway:'Measure to make a decision, not to fill a dashboard. Every outcome metric needs a guardrail beside it.',
+  quiz:[{q:'"Number of times the assistant was opened" is which kind of measure?',o:['Just activity','An outcome','A guardrail'],a:0,why:'Use does not show it helped.',hint:'Does it show anything got better?'},
+        {q:'Why pair a speed metric with a guardrail?',o:['Faster can mean less safe','Guardrails are required by law','It looks better'],a:0,why:'Without a guardrail you can win on speed while making things worse.',hint:'Think about read-only actions.'}],
+  links:[['Design success metrics',PH('14-agent-engineering/52-design-success-metrics')]]});
+
+lesson(14,{id:'build-stage',short:'Prototype, pilot, production',title:'Pick the right stage for what you still do not know',tag:'Behind Phase 14, lesson 53: Prototype, Pilot, or Production',
+  lead:'These are three different ways of learning, not three levels of polish. A prototype tests an idea cheaply. A pilot tests it with real people under control. Production means people depend on it. Choose the one that answers your current question with the least consequence.',
+  demo:'stage',takeaway:'Do not let a prototype quietly become production. Give real authority only when evidence and operations justify it.',
+  quiz:[{q:'You do not yet know if the idea works at all. Which stage?',o:['Prototype','Pilot','Production'],a:0,why:'Fake data and no consequence is the cheapest way to learn.',hint:'Which stage has the least risk?'},
+        {q:'What turns a pilot into production?',o:['Operations that match its reach: monitoring, rollback and on-call','Longer code','A new logo'],a:0,why:'More users means more need for ways to notice and undo problems.',hint:'Read the last row of the sorter.'}],
+  links:[['Prototype, pilot or production',PH('14-agent-engineering/53-prototype-pilot-or-production')]]});
+
+lesson(17,{id:'canary',short:'Canary rollout',title:'Roll out a new model slowly, with a way back',tag:'Behind Phase 17, lesson 20: Shadow, Canary, Progressive',
+  lead:'Offline tests do not catch everything. First run the new model in shadow, where users never see it. Then give it a small share of real traffic and check the numbers at each step. If a check fails, flip a switch to go back.',
+  demo:'canary',takeaway:'Shadow catches cost and errors. A canary catches what users feel. A rollback should take seconds, not a redeploy.',
+  quiz:[{q:'What does shadow mode catch best?',o:['Cost jumps and errors, with no user impact','Whether users like the answers','Typos in the prompt'],a:0,why:'Users never see shadow answers, so only measurable things show up.',hint:'Read the first step.'},
+        {q:'Thumbs-down rises at 25% traffic. What next?',o:['Stop and roll back with a switch','Go to 50% anyway','Wait a year'],a:0,why:'That is what the gate is for. Fix, then try again.',hint:'Read steps 5 and 6.'}],
+  links:[['Shadow, canary, progressive',PH('17-infrastructure-and-production/20-shadow-canary-progressive')]]});
+
+lesson(14,{id:'feedback-ratchet',short:'Feedback ratchet',title:'Make every mistake improve the system',tag:'Behind Phase 14, lesson 54: Build the Feedback Ratchet',
+  lead:'Shipping starts a second loop: learning. When something goes wrong, decide where the fix belongs (context, a test, a rule or a code change), give it an owner, and add a test so it cannot return unseen. Each fix should also say when it can be retired.',
+  demo:'ratchet',takeaway:'Evidence that changes nothing is just data nobody owns. Route each signal, assign an owner, keep a test, and set a retirement condition.',
+  quiz:[{q:'A draft quoted the wrong refund policy. What is a good fix?',o:['Update the policy file and add the case to the test set','Tell the model to be careful','Do nothing'],a:0,why:'A test stops the mistake from returning without anyone noticing.',hint:'Look at steps 2 to 4.'},
+        {q:'Why give every rule a retirement condition?',o:['So old rules do not pile up forever','Rules expire by law','It is faster'],a:0,why:'Rules that never end make the system slow and confusing.',hint:'Read the last step.'}],
+  links:[['Build the feedback ratchet',PH('14-agent-engineering/54-build-the-feedback-ratchet')]]});
+
+lesson(11,{id:'okf',short:'OKF (files instead of search)',title:'OKF: keep exact facts as files an agent reads',tag:'Beyond Phase 11, lesson 6: an alternative to RAG',
+  lead:'RAG searches a big pile of text and hopes the right chunk comes back. OKF, the Open Knowledge Format from Google Cloud, takes the other route: write each important fact as its own small Markdown file, link the files together, and let the agent read the file it needs by name.',
+  demo:'okf',takeaway:'OKF suits a small, stable, high-stakes set of facts. RAG suits large, messy or fast-changing text. Google\'s post describes OKF as a format for agent knowledge, not as a RAG replacement. Treating it as an alternative for exact facts is how others use it. Many teams will use both.',
+  quiz:[{q:'What is one OKF file?',o:['One concept, such as a table or a metric, with a small header','A whole database dump','A vector index'],a:0,why:'Each file covers one concept. The path is its identity and links connect related files.',hint:'Think "one fact, one file".'},
+        {q:'Which fits OKF best?',o:['A metric definition that must be exact','50,000 changing support tickets','A pile of scanned PDFs'],a:0,why:'Small and stable. The others are big or messy, which is what search handles.',hint:'Which one could you write by hand?'}],
+  links:[['Google Cloud: Open Knowledge Format','https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing'],['OKF vs RAG (third-party article)','https://geotoolbox.ai/blog/okf-vs-rag'],['RAG in this course',PH('11-llm-engineering/06-rag')]]});
+
 /* ================= GLOSSARY ================= */
 /* One entry per term. pat = regex source that finds it in lesson text (omit for glossary-only terms). */
 var GLOSSARY=[
@@ -1568,6 +1787,12 @@ var GLOSSARY=[
  {id:'orchestrator',term:'orchestrator',pat:'orchestrators?',def:'An agent that splits a job into parts, hands them to worker agents, and combines their results.'},
  {id:'redteam',term:'red teaming',pat:'red teaming',def:'Attacking your own AI app on purpose to find weak spots before real attackers do.'},
  {id:'capstone',term:'capstone',pat:'capstones?',def:'One complete project at the end of a course that shows you can build something from start to finish.'},
+ {id:'okf',term:'OKF (Open Knowledge Format)',pat:'OKF|Open Knowledge Format',def:'A format from Google Cloud for giving AI agents knowledge as small Markdown files, one per concept, linked together. Some teams use it instead of RAG for small sets of exact facts.'},
+ {id:'canary',term:'canary rollout',pat:'canary|shadow mode',def:'Releasing a change to a small share of real users first (or running it unseen in "shadow"), checking the numbers, and growing only if they stay healthy.'},
+ {id:'guardrail',term:'guardrail',pat:'guardrails?',def:'A check that keeps a system safe: either a rule on what may go in or out, or a measure that warns you when a goal is being met in a harmful way.'},
+ {id:'pilot',term:'pilot',pat:'pilots?',def:'A controlled trial with real users, limited access and a person watching, run before full production.'},
+ {id:'assumption',term:'assumption',pat:'assumptions?',def:'Something your plan needs to be true that you have not yet checked.'},
+ {id:'regression',term:'regression test',pat:'regression tests?|regression testing',def:'Re-running a saved set of tests after a change to see whether anything that used to work now fails.'},
  {id:'curl',term:'curl',pat:'curl',def:'A command-line tool that downloads from a URL. Setup lines like "curl -LsSf <url> | sh" download an installer and run it. The flags mean: follow redirects (L), stay quiet (s), still show errors (S), and fail on server errors (f). Only run "| sh" lines from sources you trust.'},
  {id:'uv',term:'uv',pat:'uv',def:'A fast tool that installs Python versions, creates virtual environments and installs packages. The course uses it instead of plain pip.'},
  {id:'cuda',term:'CUDA',pat:'CUDA',def:'NVIDIA\'s system for running code on its GPUs. PyTorch uses it when you have an NVIDIA card.'},
