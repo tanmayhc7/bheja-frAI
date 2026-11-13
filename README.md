@@ -15,6 +15,7 @@ Each lesson has a short animation or video, a live demo, and a two-question quiz
 - Phase 17, Infrastructure and Production: what tokens cost.
 - Starter lessons for every other phase: backpropagation (3), images as numbers (4), counting words (5), sound waves (6), attention (7), diffusion (8), trial and reward (9), next-word prediction (10), pictures and words (12), MCP (13), the agent loop (14), approval gates (15), orchestrator and workers (16), layers of defense (18), what a finished project has (19).
 - The forward deployed route, complete: outcomes before output, the real workflow, assumptions and risk, the smallest slice, specs, evaluation, production app, success metrics, prototype vs pilot vs production, canary rollout, the feedback ratchet. Plus a short lesson on OKF as an alternative to RAG for exact facts.
+- Forward deployed foundations: Docker, data and git, silent bugs, prompts, few-shot, caching, guardrails, the tool interface, tool descriptions, observability, AI gateway, AI for incidents, secrets, verification gates.
 - A glossary of plain-language terms, linked from the lessons.
 - A map of all 20 phases and a "where to start" guide from the source README.
 
