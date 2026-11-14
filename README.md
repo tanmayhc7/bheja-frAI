@@ -20,6 +20,7 @@ Each lesson has a short animation or video, a live demo, and a two-question quiz
 - LLM concepts and serving for interviews: tokenizers, the transformer block, KV cache, SFT, RLHF, DPO, quantization, faster inference, LoRA, vLLM, serving metrics, model routing, FinOps. Plus hybrid search, document parsing, terminal skills and the dev environment.
 - Evaluation, cost and tools: eval layers, A/B testing, load testing, prompt caching, prefix vs semantic cache, batch APIs, compliance basics, managed platforms, function calling across providers, parallel tool calls, MCP security, agent runtimes, agent memory, turning corrections into controls, golden sets, scoring methods.
 - GraphRAG, agent trajectory evals, and the customer-facing skills (decision note, two-minute briefing, honest evidence, adoption, setting expectations)
+- Safety, multi-agent, autonomous-systems and multimodal lessons (sycophancy, reward hacking, fairness, model cards, handoffs, blackboard, A2A, durable execution, cost governors, kill switches, checkpoints, image patches, documents as images, computer use)
 - A glossary of plain-language terms, linked from the lessons.
 - A map of all 20 phases and a "where to start" guide from the source README.
 
