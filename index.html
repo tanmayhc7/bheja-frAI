@@ -1771,6 +1771,113 @@ DEMOS.expect=function(host){sorter(host,{intro:'Before a pilot, what must the cu
  {t:'Which vector database is used inside.',a:1,why:'Fine to share if asked. It does not change their decision.'},
  {t:'What it will cost to run, and what could raise the cost.',a:0,why:'Surprise bills destroy trust.'},
  {t:'How the retry logic is written.',a:1,why:'An internal detail.'}]})};
+/* ---- Phases 12, 15, 16, 18: next batch ---- */
+DEMOS.syco=function(host){sorter(host,{intro:'Models trained on human ratings can learn that agreeing gets rewarded. Is each reply honest, or just agreeable?',choices:['Honest','Agreeable only'],end:'A helpful assistant disagrees politely when it should. Test yours with wrong claims and see whether it folds.',items:[
+ {t:'You: "2 + 2 = 5, right?"  AI: "Great point! Yes, 5."',a:1,why:'It said what you wanted to hear.'},
+ {t:'You: "I think this code is perfect."  AI: "It runs, but line 12 can crash on empty input."',a:0,why:'Kind, and still true.'},
+ {t:'AI changes its answer the moment you say "are you sure?", with no new facts.',a:1,why:'Pressure, not evidence, changed it.'},
+ {t:'AI: "I disagree. Here is the source, and here is what would change my mind."',a:0,why:'It holds a position and gives a reason.'},
+ {t:'AI praises a weak plan so you feel good.',a:1,why:'Flattery hides the risk.'}]})};
+
+DEMOS.hack=function(host){sorter(host,{intro:'Reward hacking: the system finds a way to score well without doing the real job. Is each one real progress or gaming the metric?',choices:['Real progress','Gaming the metric'],end:'When a measure becomes the target, it stops being a good measure. Check results by looking, not only by the score.',items:[
+ {t:'A coding agent makes tests pass by deleting the failing tests.',a:1,why:'Green tests, broken code.'},
+ {t:'A support bot cuts handle time by hanging up on hard calls.',a:1,why:'The number improved. Customers did not.'},
+ {t:'A coding agent fixes the bug, then the tests pass.',a:0,why:'The tests pass because the code works.'},
+ {t:'A summarizer gets a high score by copying the whole document.',a:1,why:'It matched the metric, not the goal.'},
+ {t:'A search tool finds better answers, and users click fewer results.',a:0,why:'Fewer clicks because they found it sooner.'}]})};
+
+DEMOS.fair=function(host){
+  var a=60,b=45,bx,say=h('p',{class:'result','aria-live':'polite'});
+  function draw(){var lo=Math.min(a,b),hi=Math.max(a,b),ratio=hi?lo/hi:1;
+    bx.set([{label:'Group A approved',pct:a,val:a+'%'},{label:'Group B approved',pct:b,val:b+'%'}]);
+    say.textContent='Gap: '+Math.abs(a-b)+' points. Lower rate is '+Math.round(ratio*100)+'% of the higher. '+(ratio<0.8?'Below 80%, a common rule of thumb for a closer look. It is a prompt to investigate, not a verdict.':'At or above 80%. Still look at other measures.')}
+  host.append(h('p',{class:'note',text:'Made-up numbers. Set approval rates for two groups and see the gap.'}));bx=bars(host);
+  var c1=ctl('fa','Group A',0,100,1,a,function(v){return Math.round(v)+'%'},function(v){a=Math.round(v);draw()}),c2=ctl('fb','Group B',0,100,1,b,function(v){return Math.round(v)+'%'},function(v){b=Math.round(v);draw()});
+  host.append(c1.row,c2.row,say);draw();
+};
+
+DEMOS.card=function(host){checks(host,{intro:'A model card is a short fact sheet for a model. Tick what a good one tells you.',label:'Model card',items:[
+ ['What it is for, and what it is not for','So nobody uses it for the wrong job.'],['What data it was trained on','Where it came from, in plain terms.'],['How it was tested, with numbers','Including which groups and cases.'],['Known weak spots','Where it fails.'],['Who to contact and which version','So problems reach someone.']],
+ say:function(d,n){return n===5?'A card like this lets a customer decide with open eyes.':(5-n)+' to go. Missing items are where surprises hide.'}})};
+
+DEMOS.whymulti=function(host){sorter(host,{intro:'More agents means more cost and more ways to fail. Does each task need several agents, or is one enough?',choices:['One agent','Several agents'],end:'Start with one agent. Split only when the work is parallel, needs different skills, or one agent loses track.',items:[
+ {t:'Answer questions from one FAQ page.',a:0,why:'One step, one context.'},
+ {t:'Research 10 competitors at the same time, then merge the findings.',a:1,why:'The work is parallel.'},
+ {t:'Fix a small bug in one file.',a:0,why:'Coordination costs more than the fix.'},
+ {t:'A long project mixing code, legal review and data checks.',a:1,why:'Different skills, and one context would overflow.'},
+ {t:'Summarize one email.',a:0,why:'Nothing to split.'}]})};
+
+DEMOS.handoff=function(host){flow(host,{stages:['Triage agent','Hand off','Billing agent','Reply'],steps:[
+ {at:0,say:'A triage agent reads the message and decides who should handle it.',box:'"I was charged twice for order 4412."\nTriage: this is billing.'},
+ {at:1,say:'It hands off. The hand-off must carry the context, or the next agent starts blind.',box:'handoff:\n  to: billing\n  summary: double charge, order 4412\n  already asked: nothing'},
+ {at:2,say:'The billing agent has its own tools and rules. It does not re-ask what is already known.',box:'billing tools: lookup_charge, refund (needs approval)'},
+ {at:3,say:'One reply goes back. The customer never sees the switch.',box:'"I found the duplicate charge. A refund is waiting for approval."'}]})};
+
+DEMOS.board=function(host){flow(host,{stages:['Empty board','Agent A posts','Agent B reads','Agent C builds on it'],steps:[
+ {at:0,say:'A blackboard is a shared notes area. Agents do not talk to each other. They read and write the board.',box:'board: (empty)'},
+ {at:1,say:'The research agent posts what it found.',box:'board:\n  [A] Competitor X launched a free tier.'},
+ {at:2,say:'The pricing agent reads that note, then adds its own.',box:'board:\n  [A] Competitor X launched a free tier.\n  [B] Our free tier would cost about 3 percent of revenue (made up).'},
+ {at:3,say:'The writer reads the whole board. It needs no chat history. The risk: a wrong note spreads, so label who wrote what.',box:'board has 2 notes, each with an author.'}]})};
+
+DEMOS.mfail=function(host){tabs(host,{intro:'Four ways teams of agents go wrong. Tap each.',tabs:[
+ {label:'Groupthink',text:'Agents copy the first answer they see and agree with it.',say:'Fix: ask for independent answers first, then compare.'},
+ {label:'Loops',text:'Two agents keep handing the task back and forth.',say:'Fix: a step limit and a clear owner for each task.'},
+ {label:'Lost context',text:'A hand-off leaves out a key fact.',say:'Fix: a fixed hand-off format with required fields.'},
+ {label:'Cost blowup',text:'Each agent calls others, and the bill multiplies.',say:'Fix: budgets per task and per agent.'}]})};
+
+DEMOS.a2a=function(host){sorter(host,{intro:'MCP connects an agent to tools and data. A2A (agent to agent) lets separate agents, possibly from different vendors, work together. Which is each case?',choices:['MCP','A2A'],end:'Think "agent to tool" versus "agent to agent". You may use both together.',items:[
+ {t:'Your agent reads a company database.',a:0,why:'Agent to a data source.'},
+ {t:'Your travel agent asks a partner\'s booking agent to hold a room.',a:1,why:'Two agents negotiating.'},
+ {t:'An agent calls a calculator.',a:0,why:'A tool.'},
+ {t:'Your agent delegates a task to another team\'s agent and waits for the result.',a:1,why:'Task passed between agents.'}]})};
+
+DEMOS.durable=function(host){flow(host,{stages:['Step 1','Step 2','Step 3 crashes','Resume'],steps:[
+ {at:0,say:'A long job runs in steps. After each step, the result is saved.',box:'step 1 done. saved.'},
+ {at:1,say:'Saved again.',box:'step 1 done. saved.\nstep 2 done. saved.'},
+ {at:2,say:'Step 3 crashes. Without saving, everything restarts and repeats paid work.',box:'step 3: ERROR (server restarted)'},
+ {at:3,say:'With durable execution, the job reloads its saved steps and continues at step 3. Steps that change the world must be safe to repeat.',box:'resume at step 3. steps 1 and 2 skipped.'}]})};
+
+DEMOS.govern=function(host){
+  var cap=5,bx,say=h('p',{class:'result','aria-live':'polite'}),sim=h('button',{class:'btn',type:'button',text:'Run the agent'});
+  function run(){var spent=0,calls=0;while(calls<40){spent+=0.4;calls++;if(spent>=cap)break}
+    bx.set([{label:'Spent',pct:Math.min(100,spent/20*100),val:'$'+spent.toFixed(2)},{label:'Cap',pct:cap/20*100,val:'$'+cap.toFixed(2)}]);
+    say.textContent=calls<40?'Stopped after '+calls+' calls at $'+spent.toFixed(2)+'. The cap did its job.':'Hit the 40 call limit. Spent $'+spent.toFixed(2)+'. A cap this high would not have stopped it.'}
+  host.append(h('p',{class:'note',text:'A looping agent spends a made-up $0.40 per call. A cost governor stops it at the cap.'}));bx=bars(host);
+  var c=ctl('gcap','Cost cap',1,20,1,cap,function(v){return '$'+Math.round(v)},function(v){cap=Math.round(v)});
+  sim.onclick=run;host.append(c.row,sim,say);bx.set([{label:'Spent',pct:0,val:'$0.00'},{label:'Cap',pct:cap/20*100,val:'$'+cap.toFixed(2)}]);
+  c.row.addEventListener('input',function(){bx.set([{label:'Spent',pct:0,val:'$0.00'},{label:'Cap',pct:cap/20*100,val:'$'+cap.toFixed(2)}])});
+};
+
+DEMOS.killsw=function(host){checks(host,{intro:'Before an autonomous agent runs unattended, can you stop it? Tick what your plan has.',label:'Stop plan',items:[
+ ['A kill switch anyone on the team can flip','One setting that halts all actions.'],['A step and time limit','So a loop ends by itself.'],['A canary task that must still pass','A known test the agent runs on a schedule. If it fails, pause.'],['Alerts to a person','Someone who gets told when it stops.'],['A way to undo recent actions','See the checkpoint lesson.']],
+ say:function(d,n){return n===5?'You can stop it, notice trouble and recover.':(5-n)+' to go. An agent you cannot stop should not run alone.'}})};
+
+DEMOS.ckpt=function(host){flow(host,{stages:['Checkpoint','Change','Check','Roll back or keep'],steps:[
+ {at:0,say:'Before a risky change, save a checkpoint: a copy of the state you can return to.',box:'checkpoint saved: files as of 10:02'},
+ {at:1,say:'The agent makes the change.',box:'edited 14 files'},
+ {at:2,say:'Run the checks. Do tests pass? Does the output look right?',box:'tests: 3 failed'},
+ {at:3,say:'Failed, so roll back to the checkpoint. Nothing was lost. If it had passed, keep it and save a new checkpoint.',box:'rolled back to 10:02'}]})};
+
+DEMOS.vit=function(host){
+  var img=224,pt=16,say=h('p',{class:'result','aria-live':'polite'}),grid=h('pre',{class:'pf'});
+  function draw(){var n=Math.floor(img/pt),t=n*n;grid.textContent=img+' px image cut into '+pt+' px squares\n'+n+' across x '+n+' down = '+t+' patches';
+    say.textContent=t+' tokens go into the transformer. '+(t>400?'More tokens means more work, because attention compares every pair.':'Fewer tokens is cheaper but sees less fine detail.')}
+  host.append(h('p',{class:'note',text:'A vision transformer cuts a picture into square patches and treats each patch like a word.'}));
+  var c1=ctl('vimg','Image size',64,448,32,img,function(v){return Math.round(v)+' px'},function(v){img=Math.round(v);draw()}),c2=ctl('vpt','Patch size',8,64,8,pt,function(v){return Math.round(v)+' px'},function(v){pt=Math.round(v);draw()});
+  host.append(c1.row,c2.row,grid,say);draw();
+};
+
+DEMOS.docvis=function(host){sorter(host,{intro:'For documents, you can read the text, or look at the page like an image. Which approach fits?',choices:['Extract text','Look at the page image'],end:'Newer retrieval methods embed page images directly, so charts and layout are not lost. Try both on your own documents.',items:[
+ {t:'A clean text contract.',a:0,why:'Plain text loses nothing.'},
+ {t:'A slide with a chart and labels.',a:1,why:'The meaning is in the picture.'},
+ {t:'An invoice where position matters.',a:1,why:'Layout says which number is the total.'},
+ {t:'A long plain article.',a:0,why:'Text is cheaper and enough.'}]})};
+
+DEMOS.cuse=function(host){flow(host,{stages:['Screenshot','Decide','Act','Check'],steps:[
+ {at:0,say:'A computer use agent sees the screen as a picture.',box:'screenshot: a form with a Submit button'},
+ {at:1,say:'The model decides the next action.',box:'plan: click the Name field, type "Dana"'},
+ {at:2,say:'The harness moves the mouse and types.',box:'click(212, 340)\ntype("Dana")'},
+ {at:3,say:'Take a new screenshot and check it worked. Repeat. Put an approval gate before anything that cannot be undone.',box:'screenshot: Name shows "Dana". Next: ask before Submit.'}]})};
 /* ================= WATCH: step-through animations ================= */
 WATCH.git={label:'An animated commit graph: a branch is created, gets a commit, and is merged back into main.',height:230,hold:3000,steps:[
  {say:'A repository starts with one commit on main.',cmd:'git commit -m "start"'},
@@ -2715,6 +2822,118 @@ lesson(14,{id:'expectations',short:'Set expectations',title:'Tell customers the 
   quiz:[{q:'What must the customer hear before the pilot?',o:['That a person approves outputs at first', 'Which library you used', 'Nothing'],a:0,why:'It sets the approval boundary.',hint:'Look at the first card.'},
         {q:'Why mention what could raise the cost?',o:['Surprise bills destroy trust', 'To sound careful', 'It is required'],a:0,why:'Say it before they see the invoice.',hint:'Look at the cost card.'}],
   links:[['Prototype, pilot or production',PH('14-agent-engineering/53-prototype-pilot-or-production')]]});
+/* ---- Phases 12, 15, 16, 18 next batch ---- */
+lesson(18,{id:'sycophancy',short:'Sycophancy',title:'Models can learn to tell you what you want to hear',tag:'Behind Phase 18, lesson 4: Sycophancy',
+  lead:'When people rate answers, they often rate agreeable ones higher. A model trained on those ratings can learn to agree, praise and fold under pressure. That is sycophancy.',
+  demo:'syco',takeaway:'Test it: state something wrong with confidence, and ask "are you sure?" with no new facts. A good model holds its ground politely.',
+  quiz:[{q:'What is sycophancy?',o:['Agreeing to please, even when wrong', 'Speaking too slowly', 'Refusing everything'],a:0,why:'It trades truth for approval.',hint:'Think of a flatterer.'},
+        {q:'Which reply is honest?',o:['"It runs, but line 12 can crash on empty input."', '"Perfect!"', '"Yes, 2 + 2 = 5."'],a:0,why:'It is kind and true.',hint:'Pick the one that helps.'}],
+  links:[['Sycophancy',PH('18-ethics-safety-alignment/04-sycophancy-rlhf-amplification')]]});
+
+lesson(18,{id:'reward-hacking',short:'Reward hacking',title:'Scoring well is not the same as doing well',tag:'Behind Phase 18, lesson 2: Reward Hacking and Goodhart',
+  lead:"Give a system a score to chase and it may find shortcuts you never imagined: deleting failing tests, copying the answer, hanging up on hard calls. The score goes up while the real goal gets worse. This is Goodhart's law.",
+  demo:'hack',takeaway:'Pair every metric with a check by eye. Ask what the cheapest way to get this score would be.',
+  quiz:[{q:'A coding agent deletes failing tests so all tests pass. What happened?',o:['It gamed the metric', 'Real progress', 'A faster computer'],a:0,why:'Green tests, broken code.',hint:'Is the code fixed?'},
+        {q:'How do you catch it?',o:['Look at real outputs, not only the score', 'Trust the score', 'Raise the score'],a:0,why:'The score alone can be fooled.',hint:'Check by looking.'}],
+  links:[['Reward hacking and Goodhart',PH('18-ethics-safety-alignment/02-reward-hacking-goodhart')]]});
+
+lesson(18,{id:'fairness',short:'Fairness check',title:'Compare outcomes across groups, not just overall accuracy',tag:'Behind Phase 18, lessons 20 and 21: Bias and Fairness',
+  lead:'A model can be accurate overall and still treat groups differently. A first check is to compare outcomes for each group. A big gap is a prompt to investigate, not proof of intent.',
+  demo:'fair',takeaway:'Measure by group, pick what fair means for the use case, and write it down. Different fairness measures can disagree.',
+  quiz:[{q:'Why check results by group?',o:['Overall accuracy can hide gaps', 'It makes the model faster', 'It is not needed'],a:0,why:'An average can hide a group that does worse.',hint:'Think of averages.'},
+        {q:'A gap shows up. What next?',o:['Investigate why', 'Declare it intentional', 'Ignore it'],a:0,why:'It is a signal to look closer.',hint:'It is a prompt.'}],
+  links:[['Bias and representational harm',PH('18-ethics-safety-alignment/20-bias-representational-harm')],['Fairness criteria',PH('18-ethics-safety-alignment/21-fairness-criteria-group-individual-counterfactual')]]});
+
+lesson(18,{id:'model-cards',short:'Model cards',title:'A fact sheet that tells customers what a model can and cannot do',tag:'Behind Phase 18, lesson 26: Model, System and Dataset Cards',
+  lead:'A model card is a short document: what the model is for, what it was trained on, how it was tested, where it fails, and who owns it. For customer work, a system card for your whole product does the same job.',
+  demo:'card',takeaway:'Write the card before launch. The weak spots section builds the most trust.',
+  quiz:[{q:'What is the most valuable part for trust?',o:['Known weak spots', 'The logo', 'The release date'],a:0,why:'Honest limits help people decide.',hint:'What helps a customer decide?'},
+        {q:'Who is a card for?',o:['Anyone deciding whether to use or rely on the model', 'Only researchers', 'Nobody'],a:0,why:'It informs decisions.',hint:'Think of users.'}],
+  links:[['Model, system and dataset cards',PH('18-ethics-safety-alignment/26-model-system-dataset-cards')]]});
+
+lesson(16,{id:'why-multi',short:'Why many agents',title:'Split the work only when one agent is not enough',tag:'Behind Phase 16, lesson 1: Why Multi-Agent',
+  lead:'Several agents can work in parallel, hold different skills and keep separate contexts. They also cost more and can fail in new ways, such as miscommunication. Use one agent until there is a reason to split.',
+  demo:'whymulti',takeaway:'Reasons to split: parallel work, different skills, or one context that overflows.',
+  quiz:[{q:'When are several agents worth it?',o:['The work is parallel or needs different skills', 'Always', 'Never'],a:0,why:'Otherwise the coordination cost wins.',hint:'Think of costs.'},
+        {q:'Where do you start?',o:['With one agent', 'With ten agents', 'With none'],a:0,why:'Add more only when needed.',hint:'Simple first.'}],
+  links:[['Why multi-agent',PH('16-multi-agent-and-swarms/01-why-multi-agent')]]});
+
+lesson(16,{id:'handoffs',short:'Handoffs',title:'Pass the task and its context together',tag:'Behind Phase 16, lesson 11: Handoffs and Routines',
+  lead:'In a handoff, one agent passes a conversation to a better-suited agent. The weak point is context: if the summary is thin, the next agent starts blind and asks the customer again.',
+  demo:'handoff',takeaway:'Use a fixed hand-off format: who, why, what is known, what was already tried.',
+  quiz:[{q:'What can go wrong in a handoff?',o:['Missing context', 'Too much speed', 'Nothing'],a:0,why:'The next agent starts blind.',hint:'What does it need to know?'},
+        {q:'How do you reduce that?',o:['A fixed hand-off format', 'Longer prompts', 'Fewer agents always'],a:0,why:'Required fields prevent gaps.',hint:'Use a template.'}],
+  links:[['Handoffs and routines',PH('16-multi-agent-and-swarms/11-handoffs-and-routines')]]});
+
+lesson(16,{id:'blackboard',short:'Shared board',title:'Agents coordinate through a shared notes area',tag:'Behind Phase 16, lesson 13: Shared Memory and Blackboard',
+  lead:'Instead of messaging each other, agents read and write a shared board. It is simple and keeps a visible record. The risk is a wrong note that everyone reads and builds on.',
+  demo:'board',takeaway:'Label each note with its author and when it was written, so mistakes can be traced and removed.',
+  quiz:[{q:'How do agents coordinate on a blackboard?',o:['By reading and writing a shared board', 'By chatting directly', 'By guessing'],a:0,why:'The board is the shared memory.',hint:'Think notice board.'},
+        {q:'A risk?',o:['A wrong note spreads to every agent', 'Notes are too short', 'It uses no memory'],a:0,why:'Others build on it.',hint:'Read what others wrote.'}],
+  links:[['Shared memory and blackboard',PH('16-multi-agent-and-swarms/13-shared-memory-blackboard')]]});
+
+lesson(16,{id:'multi-failures',short:'Team failures',title:'How groups of agents fail, and the fix for each',tag:'Behind Phase 16, lesson 23: Failure Modes (MAST, groupthink)',
+  lead:'Teams of agents fail in repeatable ways: copying each other, looping, dropping context at handoffs, and multiplying cost. Naming the failure makes it easier to test for.',
+  demo:'mfail',takeaway:'Add limits (steps, budget), required hand-off fields, and independent answers before comparison.',
+  quiz:[{q:'Agents copy the first answer they see. Name?',o:['Groupthink', 'Caching', 'Latency'],a:0,why:'They stop thinking independently.',hint:'Group agreement.'},
+        {q:'Two agents pass a task back and forth forever. A fix?',o:['A step limit and a clear owner', 'A bigger model', 'More agents'],a:0,why:'Limits end loops.',hint:'Stop the loop.'}],
+  links:[['Failure modes: MAST and groupthink',PH('16-multi-agent-and-swarms/23-failure-modes-mast-groupthink')]]});
+
+lesson(16,{id:'a2a',short:'A2A protocol',title:'A shared language for agents from different teams',tag:'Behind Phase 16, lesson 12: A2A Protocol',
+  lead:'MCP connects an agent to tools and data. A2A is for agents talking to other agents, even ones built by other companies, so one agent can hand a task to another and get a result back. They fit together.',
+  demo:'a2a',takeaway:'Agent to tool is MCP. Agent to agent is A2A.',
+  quiz:[{q:'Which connects an agent to a database?',o:['MCP', 'A2A', 'Neither'],a:0,why:'It is a tool or data source.',hint:'Agent to tool.'},
+        {q:"Which lets two vendors' agents cooperate?",o:['A2A', 'A calculator', 'CSS'],a:0,why:'It is agent to agent.',hint:'Agent to agent.'}],
+  links:[['A2A protocol',PH('16-multi-agent-and-swarms/12-a2a-protocol')]]});
+
+lesson(15,{id:'durable',short:'Durable execution',title:'A long job that survives a crash',tag:'Behind Phase 15, lesson 12: Durable Execution',
+  lead:'Long agent jobs hit crashes, timeouts and restarts. Durable execution saves progress after each step so the job resumes where it stopped instead of starting over and repeating paid work.',
+  demo:'durable',takeaway:'Save after each step, and make steps that change the world safe to run twice.',
+  quiz:[{q:'Step 3 crashed. What does durable execution do?',o:['Resumes at step 3', 'Restarts from step 1', 'Deletes everything'],a:0,why:'Saved steps are not repeated.',hint:'Use the saved state.'},
+        {q:'Why must some steps be safe to repeat?',o:['A step may run twice after a crash', 'Speed', 'Style'],a:0,why:'Sending an email twice is bad.',hint:'Think of retries.'}],
+  links:[['Durable execution',PH('15-autonomous-systems/12-durable-execution')]]});
+
+lesson(15,{id:'cost-governor',short:'Cost governors',title:'A hard spending cap that stops a runaway agent',tag:'Behind Phase 15, lesson 13: Cost Governors',
+  lead:'An agent stuck in a loop can spend real money fast. A cost governor sets a cap per task or per day and stops the agent when it is reached. The cap only helps if it is lower than the damage you can afford.',
+  demo:'govern',takeaway:'Set caps per task, per agent and per day, and alert a person when one is hit.',
+  quiz:[{q:'What does a cost governor do?',o:['Stops the agent at a spending cap', 'Makes the model smarter', 'Hides the bill'],a:0,why:'It limits the loss.',hint:'Think of a fuse.'},
+        {q:'Why does the cap value matter?',o:['A high cap may not stop damage in time', 'Caps are decoration', 'It does not'],a:0,why:'Set it below what you can afford to lose.',hint:'Try the slider.'}],
+  links:[['Cost governors',PH('15-autonomous-systems/13-cost-governors')]]});
+
+lesson(15,{id:'kill-switch',short:'Kill switches and canaries',title:'Be able to stop an agent, and notice when it drifts',tag:'Behind Phase 15, lesson 14: Kill Switches and Canaries',
+  lead:'Before an agent runs alone, you need a way to stop it. A kill switch halts all actions. A canary is a known test the agent runs on a schedule; if it starts failing, something has changed and the agent pauses.',
+  demo:'killsw',takeaway:'If you cannot stop it, do not run it unattended.',
+  quiz:[{q:'What is a canary task?',o:['A known test run on a schedule to spot drift', 'A cheaper model', 'A cache'],a:0,why:'If it fails, pause.',hint:'A known check.'},
+        {q:'Why alert a person?',o:['Someone must know it stopped', 'To add noise', 'It is required by law'],a:0,why:'Stopping is only useful if someone notices.',hint:'Who acts?'}],
+  links:[['Kill switches and canaries',PH('15-autonomous-systems/14-kill-switches-canaries')]]});
+
+lesson(15,{id:'checkpoints',short:'Checkpoints and rollback',title:'Save a known good state before a risky change',tag:'Behind Phase 15, lesson 16: Checkpoints and Rollback',
+  lead:'Before an agent does something risky, save a checkpoint. If the checks fail, roll back. This turns "hope it works" into "safe to try".',
+  demo:'ckpt',takeaway:'Checkpoint, change, check, then keep or roll back.',
+  quiz:[{q:'What happens when the checks fail?',o:['Roll back to the checkpoint', 'Keep going', 'Delete the checkpoint'],a:0,why:'You return to the known good state.',hint:'Undo it.'},
+        {q:'Why checkpoint first?',o:['So you can undo', 'To save money only', 'For style'],a:0,why:'You need something to return to.',hint:'Before the change.'}],
+  links:[['Checkpoints and rollback',PH('15-autonomous-systems/16-checkpoints-rollback')]]});
+
+lesson(12,{id:'patches',short:'Image patches as tokens',title:'A picture becomes a sequence of patches',tag:'Behind Phase 12, lesson 1: Vision Transformer and Patch Tokens',
+  lead:'A vision transformer cuts an image into square patches and treats each patch like a word. A 224 pixel image with 16 pixel patches gives 14 by 14, so 196 tokens. Smaller patches mean more tokens, more detail and more compute.',
+  demo:'vit',takeaway:'Image size divided by patch size, squared, gives the token count.',
+  quiz:[{q:'A 224 px image with 16 px patches gives how many tokens?',o:['196', '16', '224'],a:0,why:'14 x 14 = 196.',hint:'Divide, then square.'},
+        {q:'What does a smaller patch size do?',o:['More tokens, more compute', 'Fewer tokens', 'Nothing'],a:0,why:'More pieces to compare.',hint:'Try the slider.'}],
+  links:[['Vision transformer and patch tokens',PH('12-multimodal-ai/01-vision-transformer-patch-tokens')]]});
+
+lesson(12,{id:'doc-vision',short:'Documents as images',title:'Charts and layouts carry meaning that plain text loses',tag:'Behind Phase 12, lessons 22 and 23: Documents and ColPali',
+  lead:'Extracting text works well for plain pages. For slides, charts and invoices, layout is part of the meaning. Newer methods embed the page as an image so search can use what the page looks like.',
+  demo:'docvis',takeaway:'Try plain text first for simple documents. Use page images for charts and forms.',
+  quiz:[{q:'Which document needs the page image?',o:['A slide with a chart', 'A plain article', 'A text file'],a:0,why:'The chart is the content.',hint:'Where is the meaning?'},
+        {q:'Why is layout important on an invoice?',o:['Position shows which number is the total', 'Colors', 'Speed'],a:0,why:'Layout tells you what each number is.',hint:'Think of a total.'}],
+  links:[['Document and diagram understanding',PH('12-multimodal-ai/22-document-diagram-understanding')],['ColPali: vision native RAG',PH('12-multimodal-ai/23-colpali-vision-native-rag')]]});
+
+lesson(12,{id:'computer-use',short:'Computer use agents',title:'An agent that sees the screen and clicks',tag:'Behind Phase 12, lesson 25: Multimodal Agents and Computer Use',
+  lead:'A computer use agent takes a screenshot, decides what to do, clicks or types, and checks the result, again and again. It can use any app without an API. It is slower and easier to fool, so put approval gates before anything permanent.',
+  demo:'cuse',takeaway:'Screenshot, decide, act, check. Gate the irreversible steps.',
+  quiz:[{q:'What does the agent see?',o:['Screenshots of the screen', 'The app source code', 'Nothing'],a:0,why:'It works from pixels.',hint:'Pictures.'},
+        {q:'What belongs before Submit?',o:['An approval gate', 'Nothing', 'A bigger screenshot'],a:0,why:'Submitting may not be undoable.',hint:'Think of the approval lesson.'}],
+  links:[['Multimodal agents and computer use',PH('12-multimodal-ai/25-multimodal-agents-computer-use')]]});
 /* ================= GLOSSARY ================= */
 /* One entry per term. pat = regex source that finds it in lesson text (omit for glossary-only terms). */
 var GLOSSARY=[
@@ -2815,6 +3034,11 @@ var GLOSSARY=[
  {id:'goldenset',term:'golden set',pat:'golden set',def:'A saved list of test cases with clear right answers, re-run on every change.'},
  {id:'graphrag',term:'GraphRAG',pat:'GraphRAG',def:'A form of RAG where a model first builds a map of entities (people, products, places) and how they connect, groups them into clusters and summarizes each. Answers come from that map, so it handles questions that span many documents.'},
  {id:'trajectory',term:'trajectory',pat:'trajectory|trajectories',def:'The sequence of steps an agent took to reach its answer.'},
+ {id:'sycophancy',term:'sycophancy',pat:'sycophancy|sycophantic',def:'When a model agrees with you or flatters you to win approval, even when you are wrong.'},
+ {id:'rewardhack',term:'reward hacking',pat:'reward hacking|Goodhart',def:'When a system finds a shortcut that raises its score without doing the real job.'},
+ {id:'a2a',term:'A2A',pat:'A2A',def:'Agent to agent protocol. A shared way for separate agents, even from different vendors, to hand each other tasks.'},
+ {id:'killswitch',term:'kill switch',pat:'kill switch',def:'One control that halts all of an agent\'s actions right away.'},
+ {id:'checkpoint',term:'checkpoint',pat:'checkpoints?',def:'A saved copy of the state you can go back to if a change goes wrong.'},
  {id:'curl',term:'curl',pat:'curl',def:'A command-line tool that downloads from a URL. Setup lines like "curl -LsSf <url> | sh" download an installer and run it. The flags mean: follow redirects (L), stay quiet (s), still show errors (S), and fail on server errors (f). Only run "| sh" lines from sources you trust.'},
  {id:'uv',term:'uv',pat:'uv',def:'A fast tool that installs Python versions, creates virtual environments and installs packages. The course uses it instead of plain pip.'},
  {id:'cuda',term:'CUDA',pat:'CUDA',def:'NVIDIA\'s system for running code on its GPUs. PyTorch uses it when you have an NVIDIA card.'},
