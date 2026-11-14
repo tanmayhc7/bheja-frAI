@@ -1719,6 +1719,58 @@ DEMOS.humaneval=function(host){tabs(host,{intro:'Three ways to score an answer. 
  {label:'Code check',text:'Is the output valid JSON?\nDoes it contain the order number?\nIs it under 120 words?',say:'Fast, cheap and exact. Use it for anything a rule can decide.'},
  {label:'AI judge',text:'A second model scores tone,\nhelpfulness or faithfulness\nagainst a rubric.',say:'Scales well, but check it against human scores first.'},
  {label:'Human review',text:'A person reads a sample and rates it\nagainst a short rubric.',say:'The reference for taste and judgment. Slow and costly, so use it on samples.'}]})};
+/* ---- GraphRAG, trajectory evals, customer-facing skills ---- */
+DEMOS.graphrag=function(host){sorter(host,{intro:'Plain RAG fetches a few matching chunks. GraphRAG first builds a map of the things (people, products, places) and how they connect, then answers from that map. Which suits each question?',choices:['Plain RAG','GraphRAG'],end:'GraphRAG costs more up front, because a model reads the whole collection to build the map. Use it where questions span many documents.',items:[
+ {t:'What does clause 4.2 of the contract say?',a:0,why:'One passage holds the answer. Search finds it.'},
+ {t:'What are the main themes across all 500 incident reports?',a:1,why:'No single chunk answers it. The summary map does.'},
+ {t:'Which vendors does this supplier work with, and through whom?',a:1,why:'It is about relationships between things.'},
+ {t:'Where is the password reset page?',a:0,why:'A simple lookup.'},
+ {t:'How are the people in these emails connected to each other?',a:1,why:'The links are the answer.'}]})};
+
+DEMOS.traj=function(host){
+  var G=['Search for order','Read order status','Look up refund rule','Write reply'],
+   R={A:{steps:['Search for order','Read order status','Look up refund rule','Write reply'],ok:true},
+      B:{steps:['Search for order','Search for order','Search for order','Read order status','Search the web','Look up refund rule','Look up refund rule','Read order status','Write reply'],ok:true},
+      C:{steps:['Search for order','Write reply'],ok:true}},
+  cur='A',row=h('div',{class:'chips'}),list=h('pre',{class:'pf'}),say=h('p',{class:'result','aria-live':'polite'});
+  function draw(){row.textContent='';[['A','Run A'],['B','Run B'],['C','Run C']].forEach(function(m){row.append(h('button',{class:'chip',type:'button',text:m[1],'aria-pressed':cur===m[0]?'true':'false',onclick:function(){cur=m[0];draw()}}))});
+    var r=R[cur],gi=0,lines=[];r.steps.forEach(function(s,i){var ok=G[gi]===s;if(ok)gi++;lines.push((i+1)+'. '+s+(ok?'':'   <- extra or repeated'))});
+    var miss=G.slice(gi);list.textContent='Expected path: '+G.join(' > ')+'\n\n'+lines.join('\n')+(miss.length?'\n\nSkipped: '+miss.join(', '):'');
+    var ratio=(r.steps.length/G.length).toFixed(1);
+    say.textContent=cur==='A'?'Right answer, right path. Steps vs expected: '+ratio+'x.':cur==='B'?'Right answer, but '+ratio+'x the expected steps, with repeats and a stray web search. That costs money and time, and the final answer alone would not show it.':'Right-looking answer, but it skipped the order status and the refund rule. It may be wrong next time.'}
+  host.append(h('p',{class:'note',text:'All three runs gave a reply. Compare each one\'s steps with the expected path.'}),row,list,say);draw();
+};
+
+DEMOS.note=function(host){sorter(host,{intro:'A stakeholder note tells someone what to decide. Is each line an activity report or part of a decision note?',choices:['Activity report','Decision note'],end:'Say the evidence, the trade-off, your recommendation, the open risk, and the decision you need.',items:[
+ {t:'"We tested 40 cases and ran many experiments this week."',a:0,why:'It says what you did, not what should happen.'},
+ {t:'"Drafts save about 4 minutes each. I recommend a 2-week pilot with 5 agents."',a:1,why:'Evidence plus a recommendation.'},
+ {t:'"The team has been busy improving the prompt."',a:0,why:'Effort is not evidence.'},
+ {t:'"Risk we have not solved: it misreads refund dates in 1 of 10 cases. Decision needed: pilot with human approval, yes or no?"',a:1,why:'It names the open risk and the decision needed.'},
+ {t:'"Lots of progress. More details soon."',a:0,why:'Nothing to act on.'}]})};
+
+DEMOS.brief=function(host){tabs(host,{intro:'A two-minute briefing in four parts. Tap each.',tabs:[
+ {label:'0:00 to 0:25',text:'Who has the problem?\nWhat does the current way cost them?\nWhat outcome did you test?',say:'Start with the person and the problem, not the technology.'},
+ {label:'0:25 to 0:55',text:'The smallest change you made.\nOne real result, including a failure.',say:'Showing a failure builds trust.'},
+ {label:'0:55 to 1:25',text:'Before vs after:\nquality, speed, review effort, cost.\nThe main trade-off.',say:'Report all four together. Cheaper can hide more failures.'},
+ {label:'1:25 to 2:00',text:'Your recommendation.\nThe open risk.\nWho owns the next step.\nThe decision you need: continue, change or stop.',say:'End with a decision, not a summary.'}]})};
+
+DEMOS.evidence=function(host){sorter(host,{intro:'Label evidence for what it is. Is each claim fair, or an overclaim?',choices:['Fair claim','Overclaim'],end:'Say what kind of evidence you have, how many, and what is missing. Never claim customers, adoption or production experience you do not have.',items:[
+ {t:'"Five colleagues tried it in a walkthrough and three finished the task."',a:0,why:'It says who, how many and what happened.'},
+ {t:'"Users loved it and demand is validated." (after a solo test on made-up cases)',a:1,why:'Made-up cases are not real users.'},
+ {t:'"On 40 synthetic cases it passed 34. No real traffic yet."',a:0,why:'Honest label and a limit.'},
+ {t:'"Customers have adopted it." (it was only run locally)',a:1,why:'Local tests are not adoption.'},
+ {t:'"In a simulated incident, we detected the stale document in 2 minutes."',a:0,why:'Labelled as a simulation.'}]})};
+
+DEMOS.adopt=function(host){checks(host,{intro:'A working tool is not an adopted tool. Tick what your rollout plan has.',label:'Adoption plan',items:[
+ ['A named owner on the customer\'s side','Someone who will keep pushing for use.'],['A first task people do in week one','Small, real and quick to finish.'],['A way to see who uses it','Even a simple count.'],['A place to report problems','And someone who answers.'],['Watching a real user try it','Where do they hesitate, correct it or give up?'],['A date to review and decide','Continue, change or stop.']],
+ say:function(d,n){return n===6?'This gives adoption a fair chance.':!d[4]&&n>=4?'Watch a real person use it. Hesitation shows what a dashboard never will.':(6-n)+' to go.'}})};
+
+DEMOS.expect=function(host){sorter(host,{intro:'Before a pilot, what must the customer hear up front?',choices:['Tell them now','Detail for later'],end:'Customers forgive limits they were told about and resent ones they discovered.',items:[
+ {t:'The tool will sometimes be wrong, so a person approves each output at first.',a:0,why:'It sets the approval boundary and avoids a nasty surprise.'},
+ {t:'What is out of scope for this pilot.',a:0,why:'It prevents scope creep and false hopes.'},
+ {t:'Which vector database is used inside.',a:1,why:'Fine to share if asked. It does not change their decision.'},
+ {t:'What it will cost to run, and what could raise the cost.',a:0,why:'Surprise bills destroy trust.'},
+ {t:'How the retry logic is written.',a:1,why:'An internal detail.'}]})};
 /* ================= WATCH: step-through animations ================= */
 WATCH.git={label:'An animated commit graph: a branch is created, gets a commit, and is merged back into main.',height:230,hold:3000,steps:[
  {say:'A repository starts with one commit on main.',cmd:'git commit -m "start"'},
@@ -2614,6 +2666,55 @@ lesson(11,{id:'human-eval',short:'Scoring methods',title:'Code checks, an AI jud
   quiz:[{q:'Which should you use for "is it valid JSON?"',o:['A code check', 'A human', 'An AI judge'],a:0,why:'A rule can decide it exactly.',hint:'Open "Code check".'},
         {q:'Why compare an AI judge with humans?',o:['To make sure its scores can be trusted', 'To save money', 'To train it'],a:0,why:'A judge can be biased or inconsistent.',hint:'Open "AI judge".'}],
   links:[['Evaluation',PH('11-llm-engineering/10-evaluation')]]});
+/* ---- GraphRAG, trajectory evals, customer-facing ---- */
+lesson(11,{id:'graphrag',short:'GraphRAG',title:'Answer from a map of connections, not just matching chunks',tag:'Beyond the course: GraphRAG (see Phase 11, lesson 7)',
+  lead:'Plain RAG finds a few chunks that look like the question. That fails for questions like "what are the main themes across all these reports?". GraphRAG has a model read everything once, note the people, products and places and how they connect, group them into clusters, and summarize each cluster. Questions are then answered from that map.',
+  demo:'graphrag',takeaway:'Good for questions that span many documents or turn on relationships. The price is a heavy build step, so use plain RAG for simple lookups.',
+  quiz:[{q:'Which question suits GraphRAG?',o:['What are the main themes across 500 reports?', 'What does clause 4.2 say?', 'Where is the reset page?'],a:0,why:'It needs the whole collection, not one chunk.',hint:'Look at the themes card.'},
+        {q:'What is the main cost?',o:['A heavy build step where a model reads everything', 'Slower typing', 'A bigger vocabulary'],a:0,why:'Extracting the map takes many model calls.',hint:'Read the end message.'}],
+  links:[['Advanced RAG (course reading list: GraphRAG paper)',PH('11-llm-engineering/07-advanced-rag')],['Microsoft Research: From Local to Global (GraphRAG paper)','https://arxiv.org/abs/2404.16130']]});
+
+lesson(14,{id:'trajectory-evals',short:'Trajectory evals',title:'Judge the steps, not only the final answer',tag:'Behind Phase 14, lesson 30: Eval-Driven Agent Development',
+  lead:'Two agents can give the same reply. One took four sensible steps. The other took nine, repeated a search and wandered onto the web. Judging only the final answer misses that waste and the risk. A trajectory eval compares the steps with an expected path and counts the extra ones.',
+  demo:'traj',takeaway:'Track final-answer correctness and trajectory efficiency (steps compared with the expected minimum). Put both in CI.',
+  quiz:[{q:'Run B gave the right answer in 9 steps. Why does it matter?',o:['The extra steps cost time and money and add risk', 'It does not matter', 'Nine is lucky'],a:0,why:'A correct reply can hide a wasteful path.',hint:'Open Run B.'},
+        {q:'Run C skipped the order check. Is a good-looking reply enough?',o:['No, it skipped needed steps', 'Yes', 'Only on Fridays'],a:0,why:'It may be wrong the next time.',hint:'Open Run C.'}],
+  links:[['Eval-driven agent development',PH('14-agent-engineering/30-eval-driven-agent-development')]]});
+
+lesson(14,{id:'stakeholder-note',short:'Decision note',title:'Tell people what to decide, not what you did',tag:'Beyond the course core: Stakeholder decision note (Career Practice)',
+  lead:'A busy stakeholder does not need a list of effort. They need the evidence, the trade-off, your recommendation, the risk you have not solved, and the decision you need from them, in plain words.',
+  demo:'note',takeaway:'If the note does not say what should happen next, rewrite it.',
+  quiz:[{q:'Which line is part of a decision note?',o:['"I recommend a 2-week pilot with 5 agents."', '"We were busy this week."', '"More details soon."'],a:0,why:'It recommends an action backed by evidence.',hint:'Look at the recommendation card.'},
+        {q:'Why name the unsolved risk?',o:['It lets the stakeholder decide with open eyes', 'It looks humble', 'It is a rule'],a:0,why:'Hidden risks come back as lost trust.',hint:'Look at the risk card.'}],
+  links:[['Career practice: stakeholder note and briefing','https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/learning-paths/CAREER-PRACTICE.md']]});
+
+lesson(14,{id:'two-minute-brief',short:'Two-minute briefing',title:'A structure for explaining your work to a stakeholder',tag:'Beyond the course core: Stakeholder briefing (Career Practice)',
+  lead:'The course gives a four-part structure for a two-minute briefing: the problem, the smallest change with one real result (including a failure), before and after numbers with the trade-off, and a recommendation with the open risk and the decision needed. Keep the technical detail for questions.',
+  demo:'brief',takeaway:'Practice it out loud. Ask a peer to explain the decision back to you without reading your code. Record one objection and what you changed because of it.',
+  quiz:[{q:'What goes in the last 35 seconds?',o:['Recommendation, open risk, owner and decision needed', 'Code walkthrough', 'Thanks and a joke'],a:0,why:'End with a decision.',hint:'Open the last tab.'},
+        {q:'Why show a failure?',o:['It builds trust and shows you looked honestly', 'To fill time', 'It is required'],a:0,why:'People trust results that admit limits.',hint:'Open the second tab.'}],
+  links:[['Career practice: stakeholder note and briefing','https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/learning-paths/CAREER-PRACTICE.md']]});
+
+lesson(14,{id:'honest-evidence',short:'Honest evidence',title:'Say what kind of evidence you actually have',tag:'Beyond the course core: Present Evidence Honestly (Career Practice)',
+  lead:'Label each result as a real user observation, a peer walkthrough, a made-up case or a simulation. Record how many people and what is missing. A solo test is not customer adoption, and a local test is not production.',
+  demo:'evidence',takeaway:'Overclaiming costs more than a small result honestly stated. If you have no user access, say so and test the mechanics with a peer.',
+  quiz:[{q:'Which claim is fair?',o:['"On 40 synthetic cases it passed 34. No real traffic yet."', '"Demand is validated."', '"Customers have adopted it."'],a:0,why:'It names the kind and limits of the evidence.',hint:'Look at the first Fair card.'},
+        {q:'A solo test on made-up data. What can you not claim?',o:['Real user demand', 'That the code ran', 'That you tested'],a:0,why:'Made-up cases are not users.',hint:'Look at the Overclaim cards.'}],
+  links:[['Career practice: present evidence honestly','https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/learning-paths/CAREER-PRACTICE.md']]});
+
+lesson(14,{id:'adoption',short:'Adoption',title:'A working tool is not the same as a used tool',tag:'Beyond the course: adoption (general practice; the course covers the feedback loop)',
+  lead:'Many forward-deployed postings ask for ownership of adoption, not just delivery. People do not use a tool because it exists. Give it an owner on the customer side, a small first task, a way to see use, a place to report problems, and a date to decide. Then watch a real person try it.',
+  demo:'adopt',takeaway:"Where do users hesitate, fix the output by hand, or give up? That is what to fix next. The course's feedback ratchet turns each of those signals into a change with an owner.",
+  quiz:[{q:'What shows you what usage numbers cannot?',o:['Watching a real person try it', 'A longer report', 'A bigger model'],a:0,why:'You see hesitation and workarounds directly.',hint:'Untick it and read the message.'},
+        {q:'Why name an owner on the customer side?',o:['Someone must keep pushing for use after you leave', 'To share blame', 'It is a law'],a:0,why:'Without an owner, interest fades.',hint:'Look at the first item.'}],
+  links:[['Build the feedback ratchet',PH('14-agent-engineering/54-build-the-feedback-ratchet')],['Career practice: run a second iteration with a target user','https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/learning-paths/CAREER-PRACTICE.md']]});
+
+lesson(14,{id:'expectations',short:'Set expectations',title:'Tell customers the limits before they find them',tag:'Beyond the course: expectation setting (general practice)',
+  lead:'Before a pilot, say what the tool will get wrong sometimes, where a person approves, what is out of scope, and what it will cost and what could raise that cost. Customers forgive limits they were told about and resent ones they discovered.',
+  demo:'expect',takeaway:'Share what changes their decision. Keep internal detail for when they ask.',
+  quiz:[{q:'What must the customer hear before the pilot?',o:['That a person approves outputs at first', 'Which library you used', 'Nothing'],a:0,why:'It sets the approval boundary.',hint:'Look at the first card.'},
+        {q:'Why mention what could raise the cost?',o:['Surprise bills destroy trust', 'To sound careful', 'It is required'],a:0,why:'Say it before they see the invoice.',hint:'Look at the cost card.'}],
+  links:[['Prototype, pilot or production',PH('14-agent-engineering/53-prototype-pilot-or-production')]]});
 /* ================= GLOSSARY ================= */
 /* One entry per term. pat = regex source that finds it in lesson text (omit for glossary-only terms). */
 var GLOSSARY=[
@@ -2712,6 +2813,8 @@ var GLOSSARY=[
  {id:'hipaa',term:'HIPAA',pat:'HIPAA',def:'US rules on handling health information.'},
  {id:'soc2',term:'SOC 2',pat:'SOC 2',def:'A report from an auditor that describes a company\'s security controls. Business customers often ask for it.'},
  {id:'goldenset',term:'golden set',pat:'golden set',def:'A saved list of test cases with clear right answers, re-run on every change.'},
+ {id:'graphrag',term:'GraphRAG',pat:'GraphRAG',def:'A form of RAG where a model first builds a map of entities (people, products, places) and how they connect, groups them into clusters and summarizes each. Answers come from that map, so it handles questions that span many documents.'},
+ {id:'trajectory',term:'trajectory',pat:'trajectory|trajectories',def:'The sequence of steps an agent took to reach its answer.'},
  {id:'curl',term:'curl',pat:'curl',def:'A command-line tool that downloads from a URL. Setup lines like "curl -LsSf <url> | sh" download an installer and run it. The flags mean: follow redirects (L), stay quiet (s), still show errors (S), and fail on server errors (f). Only run "| sh" lines from sources you trust.'},
  {id:'uv',term:'uv',pat:'uv',def:'A fast tool that installs Python versions, creates virtual environments and installs packages. The course uses it instead of plain pip.'},
  {id:'cuda',term:'CUDA',pat:'CUDA',def:'NVIDIA\'s system for running code on its GPUs. PyTorch uses it when you have an NVIDIA card.'},
