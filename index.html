@@ -2,11 +2,12 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: a lesson path grouped by phase on the left, one lesson panel on the right (stacked on phones), then a phase map and a start guide. */
+/* Layout: one view at a time. Home is a grid of phase tiles; a tile opens that phase's lesson list; a lesson is a single centered column. The glossary is its own view, opened in a new tab. */
 :root{
   --bg:#EAF3F1; --surface:#FFFFFF; --well:#DFEDEA; --ink:#0C2B30; --ink2:#46666A; --line:#C3DBD6;
   --accent:#0B7A8A; --accent-deep:#085965; --on-accent:#FFFFFF; --accent-soft:#C9E8E6;
   --go:#3F7D1F; --go-soft:#E0F0D2; --bad:#C92F3B; --bad-soft:#FCE4E6; --xp:#9A5F00; --xp-soft:#FFEFC2;
+  --shadow:rgba(12,43,48,.45); --ease:cubic-bezier(.22,1,.36,1);
   --f-display:'Fraunces',Georgia,'Times New Roman',serif;
   --f-body:'Instrument Sans','Avenir Next','Segoe UI',system-ui,sans-serif;
   --f-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
@@ -15,18 +16,18 @@
   :root:not([data-theme="light"]){
     --bg:#0A1F22; --surface:#112C30; --well:#173A3E; --ink:#E4F5F3; --ink2:#9CC4C4; --line:#245056;
     --accent:#3CC4D0; --accent-deep:#1B8F9B; --on-accent:#04222A; --accent-soft:#14464C;
-    --go:#A3DB6B; --go-soft:#26401A; --bad:#FF7F88; --bad-soft:#4A1F27; --xp:#FFC95C; --xp-soft:#3D3212; color-scheme:dark;
+    --go:#A3DB6B; --go-soft:#26401A; --bad:#FF7F88; --bad-soft:#4A1F27; --xp:#FFC95C; --xp-soft:#3D3212; --shadow:rgba(0,0,0,.7); color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0A1F22; --surface:#112C30; --well:#173A3E; --ink:#E4F5F3; --ink2:#9CC4C4; --line:#245056;
   --accent:#3CC4D0; --accent-deep:#1B8F9B; --on-accent:#04222A; --accent-soft:#14464C;
-  --go:#A3DB6B; --go-soft:#26401A; --bad:#FF7F88; --bad-soft:#4A1F27; --xp:#FFC95C; --xp-soft:#3D3212; color-scheme:dark;
+  --go:#A3DB6B; --go-soft:#26401A; --bad:#FF7F88; --bad-soft:#4A1F27; --xp:#FFC95C; --xp-soft:#3D3212; --shadow:rgba(0,0,0,.7); color-scheme:dark;
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:400 16px/1.6 var(--f-body);padding-block:12px 48px;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:32px}
 a{color:var(--accent)}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
 h1,h2,h3{font-family:var(--f-display);font-weight:700;line-height:1.15;margin:0;text-wrap:balance;letter-spacing:-0.01em}
@@ -35,12 +36,8 @@ p{margin:0;text-wrap:pretty}
 .top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
 .brand{font:700 20px var(--f-display)}
 .stats{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.pill{font:500 14px var(--f-mono);padding:6px 12px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-variant-numeric:tabular-nums}
+.pill{font:500 14px var(--f-body);padding:6px 12px;border-radius:999px;background:transparent;border:1px solid var(--line);color:var(--ink2);font-variant-numeric:tabular-nums}
 .pill.xp{background:var(--xp-soft);color:var(--xp);border-color:transparent}
-.intro{display:grid;gap:16px;max-width:760px}
-.intro h1{font-size:clamp(2rem,5.4vw,3.4rem)}
-.intro p{font-size:1.125rem;color:var(--ink2)}
-.facts{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:.9375rem;color:var(--ink2)}
 .btn{font:600 15px var(--f-body);padding:10px 16px;border-radius:12px;border:0;background:var(--accent);color:var(--on-accent);
   box-shadow:0 3px 0 var(--accent-deep);cursor:pointer;min-height:44px}
 .btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--accent-deep)}
@@ -49,23 +46,9 @@ p{margin:0;text-wrap:pretty}
 .btn.ghost:active{box-shadow:0 0 0 var(--line)}
 .btn.small{min-height:36px;padding:6px 12px;font-size:14px}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.app{display:grid;grid-template-columns:260px minmax(0,1fr);gap:24px;align-items:start}
-.path{display:flex;flex-direction:column;gap:8px}
-.phead{font:600 13px var(--f-body);color:var(--ink2);padding:10px 4px 0}
-.soon{font-size:.875rem;color:var(--ink2);padding:8px 4px}
-.step{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px 12px;border-radius:14px;border:1px solid var(--line);
-  background:var(--surface);color:var(--ink);font:500 15px/1.3 var(--f-body);cursor:pointer;min-height:48px}
-.step .num{flex:0 0 auto;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--well);font:500 13px var(--f-mono)}
-.step .name{flex:1 1 auto;min-width:0}
-.step .mark{font:500 12px var(--f-mono);color:var(--go)}
-.step[aria-current="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
-.step[aria-current="true"] .num{background:var(--accent);color:var(--on-accent)}
-.step.done .num{background:var(--go);color:var(--surface)}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:24px;min-width:0}
-.panel h2{font-size:clamp(1.6rem,3.6vw,2.3rem)}
-.tag{font:500 13px var(--f-mono);color:var(--ink2)}
+.tag{font-size:.875rem;color:var(--ink2);margin-top:-12px}
 .lead{font-size:1.0625rem;max-width:68ch}
-.panel h3{font-size:1.125rem}
 .demo{background:var(--well);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
 .demo canvas{display:block;width:100%;background:var(--surface);border-radius:10px}
 .note{font-size:.875rem;color:var(--ink2)}
@@ -188,7 +171,6 @@ button.pxc{cursor:pointer}
 .badge{font:600 12px var(--f-mono);padding:3px 10px;border-radius:999px}
 .badge.need{background:var(--go-soft);color:var(--go)}
 .badge.later{background:var(--xp-soft);color:var(--xp)}
-#gl-link{text-decoration:none}
 .gl{color:inherit;text-decoration:underline dotted var(--accent);text-decoration-thickness:2px;text-underline-offset:3px;cursor:help}
 .gl:hover{color:var(--accent-deep);text-decoration-style:solid}
 .gtools{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
@@ -204,14 +186,6 @@ button.pxc{cursor:pointer}
 .sec{display:flex;flex-direction:column;gap:16px}
 .sec>p{max-width:68ch;color:var(--ink2)}
 .sec h2{font-size:clamp(1.5rem,3.4vw,2.1rem)}
-.phgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
-.ph{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:500 14px/1.3 var(--f-body);text-align:left;cursor:pointer;min-height:48px}
-.ph .n{flex:0 0 auto;font:500 13px var(--f-mono);color:var(--ink2);min-width:1.6em}
-.ph .live{margin-left:auto;font:500 11px var(--f-mono);color:var(--go)}
-.ph[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
-.ph.has{background:var(--accent-soft)}
-.phdetail{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;gap:12px;max-width:760px}
-.phdetail h3{font-size:1.25rem}
 .scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px}
 table{border-collapse:collapse;width:100%;min-width:520px;font-size:.9375rem}
 th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line)}
@@ -232,56 +206,93 @@ tr:last-child td{border-bottom:0}
 .player .count{font:500 13px var(--f-mono);color:var(--ink2);white-space:nowrap}
 .cmdline{font:500 13px var(--f-mono);color:var(--ink2);min-height:1.6em;overflow-wrap:anywhere}
 @media (max-width:820px){
-  .app{grid-template-columns:minmax(0,1fr)}
-  .path{flex-direction:row;overflow-x:auto;padding-bottom:6px;align-items:stretch}
-  .phead{flex:0 0 auto;align-self:center;padding:0 4px}
-  .soon{flex:0 0 auto;align-self:center}
-  .step{width:auto;flex:0 0 auto;min-width:160px}
   .panel{padding:18px 16px}
   .ctl{grid-template-columns:minmax(0,1fr) 56px;grid-template-areas:"l o" "i i"}
   .ctl label{grid-area:l}.ctl output{grid-area:o}.ctl input{grid-area:i}
   .brow{grid-template-columns:88px minmax(0,1fr) 52px}
+}
+::selection{background:var(--accent-soft);color:var(--ink)}
+html{scrollbar-color:var(--line) transparent}
+input,textarea{caret-color:var(--accent)}
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+a.brand{color:var(--ink);text-decoration:none}
+a.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+a.chip{display:inline-flex;align-items:center;text-decoration:none}
+a.chip:hover,.chip:hover{border-color:var(--accent)}
+#view{display:flex;flex-direction:column;gap:32px;min-width:0}
+#view h1:focus,#view h1:focus-visible{outline:none}
+.crumbs{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:.9375rem;color:var(--ink2)}
+.crumbs a{color:var(--ink2);text-underline-offset:3px;min-height:32px;display:inline-flex;align-items:center}
+.crumbs a:hover{color:var(--accent-deep)}
+.crumbs .sep{opacity:.55}
+.crumbs [aria-current]{color:var(--ink);font-weight:500}
+.hero{display:grid;gap:12px;max-width:720px;padding-top:8px}
+.hero h1{font-size:clamp(2rem,5vw,3rem)}
+.hero p{font-size:1.125rem;color:var(--ink2)}
+.cont{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;background:var(--accent-soft);border-radius:16px;padding:16px 20px}
+.cont .ct{display:grid;gap:2px;min-width:0;flex:1 1 260px}
+.cont .ct span{font-size:.875rem;color:var(--ink2)}
+.cont .ct strong{font:600 1.125rem/1.3 var(--f-display)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.ptile{display:flex;flex-direction:column;gap:8px;min-height:148px;padding:16px;border-radius:16px;background:var(--surface);border:1px solid var(--line);color:var(--ink);text-decoration:none;min-width:0;
+  transition:transform .18s var(--ease),border-color .18s var(--ease),box-shadow .18s var(--ease)}
+.ptile:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 10px 22px -14px var(--shadow)}
+.ptile:active{transform:translateY(0);box-shadow:none}
+.ptop{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pn{font:700 1.75rem/1 var(--f-display);color:var(--accent);font-variant-numeric:tabular-nums}
+.nm{font:600 1.0625rem/1.3 var(--f-body);overflow-wrap:anywhere}
+.pm{margin-top:auto;display:grid;gap:6px;font-size:.8125rem;color:var(--ink2)}
+.bar{display:block;height:6px;border-radius:999px;background:var(--well);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:999px}
+.ptile.all .bar i{background:var(--go)}
+.donemark{color:var(--go);display:inline-flex;gap:4px;align-items:center;font-size:.8125rem;font-weight:600}
+.phv,.lv,.gv{display:flex;flex-direction:column;gap:20px;width:100%;max-width:860px;margin-inline:auto;min-width:0}
+.gv{max-width:none}
+.phv h1,.gv h1{font-size:clamp(1.75rem,4.4vw,2.5rem)}
+.blurb{font-size:1.0625rem;color:var(--ink2);max-width:65ch}
+.pprog{display:grid;gap:6px;max-width:420px;font-size:.875rem;color:var(--ink2)}
+.lessons{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+@media (min-width:900px){.lessons{grid-template-columns:repeat(2,minmax(0,1fr))}.phv{max-width:980px}}
+.lrow{display:flex;gap:14px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--line);color:var(--ink);text-decoration:none;min-height:60px;
+  transition:border-color .18s var(--ease),transform .18s var(--ease)}
+.lrow:hover{border-color:var(--accent);transform:translateX(2px)}
+.num{flex:0 0 auto;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--well);font:500 13px var(--f-mono);font-variant-numeric:tabular-nums}
+.lrow.done .num{background:var(--go);color:var(--surface)}
+.lt{display:grid;gap:1px;min-width:0;flex:1 1 auto}
+.lt strong{font-weight:600}
+.lt span{font-size:.875rem;color:var(--ink2)}
+.rel{display:grid;gap:8px}
+.about h2{font-size:1.0625rem}
+.panel h1{font-size:clamp(1.6rem,3.6vw,2.3rem)}
+.sub{font-size:1.125rem}
+.lnav{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
+.lnav .btn{max-width:100%}
+.foot a{color:var(--ink2)}
+@media (max-width:520px){
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .ptile{min-height:136px;padding:14px}
+  .stats .pill{font-size:13px;padding:5px 10px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
 
 <div class="wrap">
   <header class="top">
-    <div class="brand">AI From Scratch</div>
+    <a class="brand" href="#home">AI From Scratch</a>
     <div class="stats" aria-label="Your progress">
       <span class="pill xp"><span id="st-xp">0</span> XP</span>
       <span class="pill"><span id="st-streak">0</span>-day streak</span>
       <span class="pill"><span id="st-done">0</span>/<span id="st-total">0</span> lessons</span>
-      <a class="btn ghost small" id="gl-link" href="#glossary">Glossary</a>
+      <a class="btn ghost small" id="gl-link" href="#glossary" target="_blank" rel="noopener">Glossary</a>
       <button class="btn ghost small" id="theme" type="button">Switch theme</button>
     </div>
   </header>
 
-  <section class="intro">
-    <h1>Learn the ideas behind AI by moving them around</h1>
-    <p>Every one of the 20 phases now has a starter lesson. The deepest coverage so far is setup, the little math you need, and building with language models (search, RAG, tool calling, testing and cost). Most lessons have a short animation or video, and all have something to drag or click, then two questions. The material follows the open-source course <a href="https://github.com/rohitg00/ai-engineering-from-scratch" target="_blank" rel="noopener">AI Engineering from Scratch</a>, and more phases will be added to this page.</p>
-    <div class="facts">
-      <span>Free and MIT licensed course</span>
-      <span>542 lessons across 20 phases</span>
-      <span>Progress is saved in this browser</span>
-    </div>
-  </section>
+  <main id="view"></main>
 
-  <main class="app" id="course">
-    <nav class="path" id="path" aria-label="Lessons"></nav>
-    <article class="panel" id="lesson"></article>
-  </main>
-
-  <section class="sec" id="phase-map">
-    <h2>The whole course on one map</h2>
-    <p>The course has 20 phases. Highlighted phases already have lessons here. Pick any phase to see what it covers and which phases it builds on, following the dependency chart in the repo's README.</p>
-    <div class="phgrid" id="phgrid" role="group" aria-label="Course phases"></div>
-    <div class="phdetail" id="phdetail"></div>
-  </section>
-
-  <section class="sec" id="start">
-    <h2>Where to start in the real course</h2>
-    <p>The README suggests a starting phase and a time estimate for each background.</p>
+  <template id="t-about">
+    <h1 id="view-title" tabindex="-1">Where to start in the real course</h1>
+    <p class="blurb">This page is a companion to the free, MIT licensed course by rohitg00. Its README suggests a starting phase and a time estimate for each background.</p>
     <div class="scroll">
       <table>
         <thead><tr><th>Your background</th><th>Start at</th><th>Estimated time</th></tr></thead>
@@ -299,17 +310,17 @@ tr:last-child td{border-bottom:0}
     </div>
     <div class="ways">
       <div class="way">
-        <h3>Read on the website</h3>
+        <h2>Read on the website</h2>
         <p>Every completed lesson is online. No setup and no cloning.</p>
         <a href="https://aiengineeringfromscratch.com/lesson?path=phases%2F00-setup-and-tooling%2F01-dev-environment" target="_blank" rel="noopener">Open Phase 0, lesson 1</a>
       </div>
       <div class="way">
-        <h3>Use your coding agent as a tutor</h3>
+        <h2>Use your coding agent as a tutor</h2>
         <p>Needs Node.js, npx and a coding agent that supports skills. It asks which agent and scope to install into.</p>
         <div class="code"><code id="c1">npx skills add rohitg00/ai-engineering-from-scratch</code><button class="btn ghost small" type="button" data-copy="c1">Copy</button></div>
       </div>
       <div class="way">
-        <h3>Run the lesson code</h3>
+        <h2>Run the lesson code</h2>
         <p>Clone the repo, then run the first math lesson. It needs no extra packages.</p>
         <div class="code"><code id="c2">git clone https://github.com/rohitg00/ai-engineering-from-scratch.git
 cd ai-engineering-from-scratch
@@ -317,20 +328,9 @@ python3 phases/01-math-foundations/01-linear-algebra-intuition/code/vectors.py</
       </div>
     </div>
     <div class="row"><button class="btn ghost small" id="reset" type="button">Reset my progress</button><span class="note" id="reset-note" role="status"></span></div>
-  </section>
+  </template>
 
-  <section class="sec" id="glossary" aria-labelledby="gl-h">
-    <h2 id="gl-h">Glossary</h2>
-    <p>Plain meanings for the jargon in the lessons. In a lesson, a word with a dotted underline links here.</p>
-    <div class="gtools">
-      <label for="gl-q" class="note">Find a word</label>
-      <input class="gsearch" id="gl-q" type="search" autocomplete="off" placeholder="for example: venv, bias, commit">
-      <span class="note" id="gl-count" role="status"></span>
-    </div>
-    <dl class="glist" id="glist"></dl>
-  </section>
-
-  <p class="foot">An independent explainer written from the public README of rohitg00/ai-engineering-from-scratch. It is not affiliated with the course. Numbers inside the demos are made up for teaching and do not come from the course.</p>
+  <p class="foot">An independent explainer written from the public README of rohitg00/ai-engineering-from-scratch. It is not affiliated with the course. Numbers inside the demos are made up for teaching and do not come from the course. <a href="#about">Where to start in the real course</a></p>
 </div>
 
 <script>
@@ -341,7 +341,7 @@ python3 phases/01-math-foundations/01-linear-algebra-intuition/code/vectors.py</
      The first argument is the phase number (0 to 19). Ids must be unique and never change, because progress is saved by id.
   3. Jargon: add an entry to GLOSSARY ({id,term,pat,def}). Its first use in a lesson's lead, takeaway, quiz questions and command notes links to it automatically. Omit pat for glossary-only terms.
   4. Optional: add watch:{kind:'steps',id:'x'} (define WATCH.x with steps and a draw function) or watch:{kind:'video',src:'media/x.mp4',cap:'...'} to a lesson.
-  5. Nothing else. The path, counters, phase map and quiz pick the lesson up on their own.
+  5. Nothing else. The phase tiles, lesson lists, counters and quiz pick the lesson up on their own.
 */
 (function(){
 'use strict';
@@ -3089,7 +3089,11 @@ var GLOSSARY=[
  {id:'weight',term:'weight',pat:'weights?',def:'A number that says how much one input counts. A big weight makes that input matter more, and a negative weight pulls the total down.'},
  {id:'wsum',term:'weighted sum',pat:'weighted sum',def:'Multiply each input by its weight and add up the results. It is the core calculation inside a neuron.'}
 ];
-var GL_RX=null,GL_BY={},glBack=null;
+var GL_RX=null,GL_BY={};
+/* Glossary links open in a new tab. On the site itself that is this same page with a #g-term hash. Anywhere else (a preview or embed) they point at the public site. */
+var PAGES='https://tanmayhc7.github.io/bheja-frAI/';
+var OWN=location.protocol==='file:'||/(^|\.)github\.io$/.test(location.hostname)||/^(localhost|127\.0\.0\.1|example\.test)$/.test(location.hostname);
+var GLURL=OWN?'':PAGES;
 (function(){
   var withPat=GLOSSARY.filter(function(g){return g.pat}).sort(function(a,b){return b.term.length-a.term.length});
   GLOSSARY.forEach(function(g){GL_BY[g.id]=g});
@@ -3103,13 +3107,12 @@ function gl(text,seen){
     var g=null;for(var k=1;k<m.length;k++){if(m[k]!==undefined){g=GL_RX.list[k-1];break}}
     if(!g||seen[g.id])continue;seen[g.id]=1;
     if(m.index>last)out.push(text.slice(last,m.index));
-    out.push(h('a',{class:'gl',href:'#g-'+g.id,'data-g':g.id,title:g.term+': '+g.def,text:m[0],onclick:glClick}));
+    out.push(h('a',{class:'gl',href:GLURL+'#g-'+g.id,target:'_blank',rel:'noopener',title:g.term+': '+g.def+' (opens the glossary in a new tab)',text:m[0]}));
     last=m.index+m[0].length;
   }
   if(last<text.length)out.push(text.slice(last));
   return out;
 }
-function glClick(e){e.preventDefault();openGloss(this.getAttribute('data-g'),this)}
 function glMentions(g){
   var res=[];if(!g.rx)return res;var rx=new RegExp('\\b(?:'+g.pat+')\\b','i');
   flat().forEach(function(L,i){
@@ -3118,62 +3121,73 @@ function glMentions(g){
   });
   return res;
 }
-function renderGloss(){
-  var list=$('#glist');list.textContent='';
-  GLOSSARY.slice().sort(function(a,b){return a.term.toLowerCase()<b.term.toLowerCase()?-1:1}).forEach(function(g){
-    var used=glMentions(g),all=flat();
-    var dd=h('dd',null,h('p',{text:g.def}));
-    if(used.length){var u=h('div',{class:'gused'},h('span',{class:'note',text:'Used in:'}));
-      used.forEach(function(i){u.append(h('button',{class:'chip',type:'button',text:all[i].short,onclick:function(){select(i,true);$('#course').scrollIntoView({block:'start'})}}))});dd.append(u)}
-    var back=h('button',{class:'btn ghost small gback',type:'button',hidden:true,text:'Back to the lesson',onclick:function(){glReturn()}});
-    dd.append(back);
-    list.append(h('div',{class:'gent',id:'g-'+g.id,tabindex:'-1','data-t':(g.term+' '+g.def).toLowerCase()},h('dt',null,h('dfn',{text:g.term})),dd));
+
+/* ================= UI =================
+   Views, picked by the hash: home (phase tiles), p-N (one phase and its lessons), a lesson id, glossary / g-term, about. */
+var cur=-1,cmdN=0,shown=null,booted=false,AT='afs-at';
+var IC={check:'M5 12.5l4.5 4.5L19 7.5',next:'M5 12h14M13 6l6 6-6 6',prev:'M19 12H5M11 6l-6 6 6 6'};
+function icon(n){var NS='http://www.w3.org/2000/svg',s=document.createElementNS(NS,'svg');s.setAttribute('viewBox','0 0 24 24');s.setAttribute('class','ic');s.setAttribute('aria-hidden','true');
+  var p=document.createElementNS(NS,'path');p.setAttribute('d',IC[n]);s.appendChild(p);return s}
+function idx(id){var a=flat();for(var i=0;i<a.length;i++)if(a[i].id===id)return i;return -1}
+function go(hash){if(location.hash===hash)route(true);else location.hash=hash}
+function doneIn(p){var n=0;p.lessons.forEach(function(L){if(state.done[L.id])n++});return n}
+function bar(n,t){return h('span',{class:'bar'},h('i',{style:'width:'+(t?Math.round(n/t*100):0)+'%'}))}
+function crumbs(links,here){var nav=h('nav',{class:'crumbs','aria-label':'You are here'});
+  links.forEach(function(l){nav.append(h('a',{href:l[0],text:l[1]}),h('span',{class:'sep','aria-hidden':'true',text:'/'}))});
+  nav.append(h('span',{'aria-current':'page',text:here}));return nav}
+
+function viewHome(v){
+  var all=flat(),at=null;try{at=localStorage.getItem(AT)}catch(e){}
+  var i=idx(at),started=Object.keys(state.done).length>0||i>=0;
+  if(i<0||state.done[all[i].id]){var from=i<0?0:i;i=-1;for(var k=0;k<all.length;k++){var j=(from+k)%all.length;if(!state.done[all[j].id]){i=j;break}}}
+  v.append(h('section',{class:'hero'},
+    h('h1',{id:'view-title',tabindex:'-1',text:'Learn the ideas behind AI by moving them around'}),
+    h('p',{text:all.length+' short lessons across 20 phases. Each one has something to play with and two quick questions.'})));
+  if(i>=0){var L=all[i],p=PHASES[L.phase];
+    v.append(h('section',{class:'cont','aria-label':started?'Continue':'Start'},
+      h('div',{class:'ct'},h('span',{text:(started?'Next up in ':'Start with ')+'Phase '+p.n+': '+p.name}),h('strong',{text:L.title})),
+      h('a',{class:'btn',id:'continue',href:'#'+L.id},started?'Continue':'Start the first lesson',icon('next'))));
+  }else v.append(h('section',{class:'cont'},h('div',{class:'ct'},h('strong',{text:'You have finished every lesson here.'}),h('span',{text:'Pick any phase to review it.'}))));
+  var grid=h('div',{class:'tiles'});
+  PHASES.forEach(function(p){var t=p.lessons.length,d=doneIn(p),full=t>0&&d===t;
+    grid.append(h('a',{class:'ptile'+(full?' all':''),href:'#p-'+p.n,'aria-label':'Phase '+p.n+': '+p.name+', '+d+' of '+t+' lessons done'},
+      h('span',{class:'ptop'},h('span',{class:'pn',text:String(p.n)}),full?h('span',{class:'donemark'},icon('check'),'Done'):null),
+      h('span',{class:'nm',text:p.name}),
+      h('span',{class:'pm'},h('span',{text:d?d+' of '+t+' done':t+(t===1?' lesson':' lessons')}),bar(d,t))));
   });
-  var q=$('#gl-q');
-  function filter(){var v=q.value.trim().toLowerCase(),n=0;
-    document.querySelectorAll('.gent').forEach(function(e){var ok=!v||e.getAttribute('data-t').indexOf(v)>-1;e.hidden=!ok;if(ok)n++});
-    $('#gl-count').textContent=v?(n===0?'No matches.':n+(n===1?' match':' matches')):''}
-  q.addEventListener('input',filter);
-  $('#gl-link').addEventListener('click',function(e){e.preventDefault();$('#glossary').scrollIntoView({block:'start'});glBack=null});
-}
-function openGloss(id,from){
-  var q=$('#gl-q');if(q.value){q.value='';q.dispatchEvent(new Event('input'))}
-  document.querySelectorAll('.gent').forEach(function(e){e.classList.remove('hit');var b=e.querySelector('.gback');if(b)b.hidden=true});
-  var e=document.getElementById('g-'+id);if(!e)return;
-  glBack=from||null;e.classList.add('hit');
-  if(from){var b=e.querySelector('.gback');if(b)b.hidden=false}
-  e.scrollIntoView({block:'center'});e.focus({preventScroll:true});
-}
-function glReturn(){
-  var f=glBack;glBack=null;document.querySelectorAll('.gback').forEach(function(b){b.hidden=true});
-  if(f&&document.contains(f)){f.scrollIntoView({block:'center'});f.focus({preventScroll:true})}else $('#course').scrollIntoView({block:'start'});
+  v.append(h('section',{class:'sec','aria-labelledby':'ph-h'},h('h2',{id:'ph-h',text:'Phases'}),grid));
 }
 
-/* ================= UI ================= */
-var cur=0,cmdN=0;
-function buildPath(){
-  var nav=$('#path');nav.textContent='';var all=flat(),k=0;
-  PHASES.forEach(function(p){
-    if(!p.lessons.length)return;
-    nav.append(h('div',{class:'phead',text:'Phase '+p.n+': '+p.name}));
-    p.lessons.forEach(function(L){
-      var i=k++,d=!!state.done[L.id];
-      nav.append(h('button',{class:'step'+(d?' done':''),type:'button','aria-current':i===cur?'true':'false','aria-label':'Lesson '+(i+1)+': '+L.short+(d?', completed':''),onclick:function(){select(i,true)}},
-        h('span',{class:'num','aria-hidden':'true',text:String(i+1)}),h('span',{class:'name',text:L.short}),h('span',{class:'mark','aria-hidden':'true',text:d?'Done':''})));
-    });
+function leadsTo(n){var o=[];Object.keys(NEEDS).forEach(function(k){if(NEEDS[k].indexOf(n)>-1)o.push(+k)});return o}
+function phChips(label,arr){var d=h('div',{class:'chips'});arr.forEach(function(k){d.append(h('a',{class:'chip',href:'#p-'+k,text:'Phase '+k+': '+PHASES[k].name}))});
+  return h('div',{class:'rel'},h('p',{class:'note',text:label}),d)}
+function viewPhase(v,n){
+  var p=PHASES[n],t=p.lessons.length,d=doneIn(p),needs=NEEDS[n]||[],leads=leadsTo(n),list=h('ol',{class:'lessons'});
+  p.lessons.forEach(function(L,k){var dn=!!state.done[L.id];
+    list.append(h('li',null,h('a',{class:'lrow'+(dn?' done':''),href:'#'+L.id,'aria-label':'Lesson '+(k+1)+': '+L.short+(dn?', completed':'')},
+      h('span',{class:'num','aria-hidden':'true'},dn?icon('check'):String(k+1)),
+      h('span',{class:'lt'},h('strong',{text:L.short}),h('span',{text:L.title})))));
   });
-  nav.append(h('p',{class:'soon',text:'Phases 2 to 19 are not built here yet. The map below shows what is coming.'}));
+  v.append(h('div',{class:'phv'},crumbs([['#home','All phases']],'Phase '+n),
+    h('h1',{id:'view-title',tabindex:'-1',text:'Phase '+n+': '+p.name}),
+    h('p',{class:'blurb',text:p.b}),
+    h('div',{class:'pprog'},h('span',{text:d+' of '+t+' lessons done'+(p.c?'. The full course has '+p.c+' in this phase.':'')}),bar(d,t)),
+    list,
+    needs.length?phChips('Builds on',needs):null,
+    leads.length?phChips('Leads to',leads):null,
+    h('a',{href:p.f?REPO+'/tree/main/phases/'+p.f:REPO+'/tree/main/phases',target:'_blank',rel:'noopener',text:'Open this phase in the course repo'})));
 }
+
 function finish(i,first){
   var all=flat(),L=all[i],n=L.quiz.length,xp=first*10+(n-first)*5,box=$('#banner');box.textContent='';
   var was=!!state.done[L.id];
-  if(!was){state.done[L.id]={xp:xp};state.xp+=xp;bump();save();stats();buildPath()}
+  if(!was){state.done[L.id]={xp:xp};state.xp+=xp;bump();save();stats()}
   var msg=was?'You already finished this lesson, so no new XP this time.':'Lesson complete. +'+xp+' XP';
-  var nextBtn=i<all.length-1?h('button',{class:'btn',type:'button',text:'Next lesson',onclick:function(){select(i+1,true)}}):h('button',{class:'btn',type:'button',text:'See the course map',onclick:function(){$('#phase-map').scrollIntoView({block:'start'})}});
+  var nextBtn=i<all.length-1?h('a',{class:'btn',href:'#'+all[i+1].id},'Next lesson',icon('next')):h('a',{class:'btn',href:'#home',text:'Back to all phases'});
   box.append(h('div',{class:'banner',role:'status'},h('strong',{text:msg}),nextBtn));
 }
 function buildQuiz(i){
-  var L=flat()[i],box=h('section',{class:'quiz'},h('h3',{text:'Check yourself'}));var solved=0,first=0;
+  var L=flat()[i],box=h('section',{class:'quiz'},h('h2',{class:'sub',text:'Check yourself'}));var solved=0,first=0;
   L.quiz.forEach(function(q,qi){
     var tries=0,why=h('p',{class:'why',role:'status','aria-live':'polite'}),btns=[],gid=L.id+'-q'+qi,opts=h('div',{class:'opts'});
     q.o.forEach(function(txt,oi){
@@ -3203,61 +3217,79 @@ function watchBox(L){
   var w=L.watch;if(!w)return null;var box=h('div',{class:'watch'});
   if(w.kind==='video'){
     var v=h('video',{controls:true,muted:true,playsinline:true,preload:'metadata',src:w.src,'aria-label':'Video: '+L.short});v.muted=true;
-    box.append(v,h('p',{class:'note',text:w.cap}));return {head:h('h3',{text:'Watch'}),box:box};
+    box.append(v,h('p',{class:'note',text:w.cap}));return {head:h('h2',{class:'sub',text:'Watch'}),box:box};
   }
-  if(WATCH[w.id]){stepper(box,WATCH[w.id]);return {head:h('h3',{text:'Watch it step by step'}),box:box}}
+  if(WATCH[w.id]){stepper(box,WATCH[w.id]);return {head:h('h2',{class:'sub',text:'Watch it step by step'}),box:box}}
   return null;
 }
-function select(i,user){
-  cur=i;redraws=[];var L=flat()[i],root=$('#lesson');root.textContent='';
+function viewLesson(v,i){
+  var all=flat(),L=all[i],p=PHASES[L.phase],k=p.lessons.indexOf(L)+1,root=h('article',{class:'panel',id:'lesson'});
+  try{localStorage.setItem(AT,L.id)}catch(e){}
   var demo=h('div',{class:'demo',id:'demo'});
   var links=h('div',{class:'links'},h('strong',{text:'In the repo:'}));
   L.links.forEach(function(l){links.append(h('a',{href:l[1],target:'_blank',rel:'noopener',text:l[0]}))});
   var cmds=null,seen={},leadN=gl(L.lead,seen),takeN=gl(L.takeaway,seen);
-  if(L.cmds){cmds=h('div',{class:'cmd'},h('h3',{text:'Run it for real'}));L.cmds.forEach(function(c){cmds.append(h('p',{class:'note'},gl(c[0],seen)),codeBox('cmd-'+L.id+'-'+(cmdN++),c[1]))})}
+  if(L.cmds){cmds=h('div',{class:'cmd'},h('h2',{class:'sub',text:'Run it for real'}));L.cmds.forEach(function(c){cmds.append(h('p',{class:'note'},gl(c[0],seen)),codeBox('cmd-'+L.id+'-'+(cmdN++),c[1]))})}
   var wb=watchBox(L),follow=followBox(L);
-  [h('p',{class:'tag',text:L.tag}),h('h2',{id:'lesson-title',tabindex:'-1',text:L.title}),h('p',{class:'lead'},leadN),
-    wb&&wb.head,wb&&wb.box,h('h3',{text:'Try it'}),demo,h('p',{class:'takeaway'},takeN),buildQuiz(i),follow,cmds,links].forEach(function(n){if(n)root.append(n)});
-  DEMOS[L.demo](demo);buildPath();
-  try{history.replaceState(null,'','#'+L.id)}catch(e){}
-  if(user){var t=$('#lesson-title');if(t)t.focus({preventScroll:true});if(window.innerWidth<=820)root.scrollIntoView({block:'start'})}
+  [h('h1',{id:'lesson-title',tabindex:'-1',text:L.title}),h('p',{class:'tag',text:L.tag}),h('p',{class:'lead'},leadN),
+    wb&&wb.head,wb&&wb.box,h('h2',{class:'sub',text:'Try it'}),demo,h('p',{class:'takeaway'},takeN),buildQuiz(i),follow,cmds,links].forEach(function(n){if(n)root.append(n)});
+  var nav=h('nav',{class:'lnav','aria-label':'More lessons'},
+    i>0?h('a',{class:'btn ghost',href:'#'+all[i-1].id},icon('prev'),all[i-1].short):h('span'),
+    i<all.length-1?h('a',{class:'btn ghost',href:'#'+all[i+1].id},all[i+1].short,icon('next')):h('span'));
+  v.append(h('div',{class:'lv'},crumbs([['#home','All phases'],['#p-'+p.n,'Phase '+p.n+': '+p.name]],'Lesson '+k+' of '+p.lessons.length),root,nav));
+  DEMOS[L.demo](demo);
 }
 
-/* ---------- phase map ---------- */
-var selPh=1;
-function leadsTo(n){var o=[];Object.keys(NEEDS).forEach(function(k){if(NEEDS[k].indexOf(n)>-1)o.push(+k)});return o}
-function phChips(arr){var d=h('div',{class:'chips'});arr.forEach(function(k){d.append(h('button',{class:'chip',type:'button',text:'Phase '+k+': '+PHASES[k].name,onclick:function(){selPh=k;renderPh()}}))});return d}
-function renderPh(){
-  var g=$('#phgrid');g.textContent='';
-  PHASES.forEach(function(p){var has=p.lessons.length>0;
-    g.append(h('button',{class:'ph'+(has?' has':''),type:'button','aria-pressed':p.n===selPh?'true':'false',onclick:function(){selPh=p.n;renderPh()}},
-      h('span',{class:'n',text:String(p.n)}),h('span',{text:p.name}),has?h('span',{class:'live',text:'open'}):null))});
-  var p=PHASES[selPh],d=$('#phdetail');d.textContent='';
-  var needs=NEEDS[p.n]||[],leads=leadsTo(p.n),all=flat(),first=-1;
-  all.forEach(function(L,i){if(L.phase===p.n&&first<0)first=i});
-  d.append(h('h3',{text:'Phase '+p.n+': '+p.name}),
-    h('p',{class:'note',text:(p.c?p.c+' lessons in the course':'Lesson count: see the repo')+'. '+(p.lessons.length?p.lessons.length+' lessons open on this page.':'Not built on this page yet.')}),
-    h('p',{text:p.b}),
-    first>=0?h('div',{class:'row'},h('button',{class:'btn',type:'button',text:'Start this phase',onclick:function(){select(first,true);$('#course').scrollIntoView({block:'start'})}})):null,
-    needs.length?h('div',null,h('p',{class:'note',text:'Builds on'}),phChips(needs)):h('p',{class:'note',text:'This is the starting point. Nothing comes before it.'}),
-    leads.length?h('div',null,h('p',{class:'note',text:'Leads to'}),phChips(leads)):null,
-    h('a',{href:p.f?REPO+'/tree/main/phases/'+p.f:REPO+'/tree/main/phases',target:'_blank',rel:'noopener',text:p.f?'Open this phase in the repo':'Open the phases folder in the repo'}));
+/* ---------- glossary: its own view, opened in a new tab from lessons ---------- */
+function viewGloss(v,hit){
+  var all=flat(),list=h('dl',{class:'glist',id:'glist'}),count=h('span',{class:'note',id:'gl-count',role:'status'});
+  var q=h('input',{class:'gsearch',id:'gl-q',type:'search',autocomplete:'off',placeholder:'for example: venv, bias, commit'});
+  GLOSSARY.slice().sort(function(a,b){return a.term.toLowerCase()<b.term.toLowerCase()?-1:1}).forEach(function(g){
+    var used=glMentions(g),dd=h('dd',null,h('p',{text:g.def}));
+    if(used.length){var u=h('div',{class:'gused'},h('span',{class:'note',text:'Used in:'}));
+      used.forEach(function(i){u.append(h('a',{class:'chip',href:'#'+all[i].id,text:all[i].short}))});dd.append(u)}
+    list.append(h('div',{class:'gent'+(g.id===hit?' hit':''),id:'g-'+g.id,tabindex:'-1','data-t':(g.term+' '+g.def).toLowerCase()},h('dt',null,h('dfn',{text:g.term})),dd));
+  });
+  q.addEventListener('input',function(){var s=q.value.trim().toLowerCase(),n=0;
+    list.querySelectorAll('.gent').forEach(function(e){var ok=!s||e.getAttribute('data-t').indexOf(s)>-1;e.hidden=!ok;if(ok)n++});
+    count.textContent=s?(n===0?'No matches. Try a shorter word.':n+(n===1?' match':' matches')):''});
+  v.append(h('div',{class:'gv'},crumbs([['#home','All phases']],'Glossary'),
+    h('h1',{id:'view-title',tabindex:'-1',text:'Glossary'}),
+    h('p',{class:'blurb',text:'Plain meanings for the jargon in the lessons. '+GLOSSARY.length+' terms, A to Z.'}),
+    h('div',{class:'gtools'},h('label',{for:'gl-q',class:'note',text:'Find a word'}),q,count),list));
+  if(hit){var e=document.getElementById('g-'+hit);if(e){setTimeout(function(){if(e.scrollIntoView)e.scrollIntoView({block:'center'});e.focus({preventScroll:true})},0)}}
+}
+function viewAbout(v){
+  var box=h('div',{class:'phv about'},crumbs([['#home','All phases']],'About the course'));
+  box.append($('#t-about').content.cloneNode(true));v.append(box);
+  box.querySelectorAll('[data-copy]').forEach(function(b){b.addEventListener('click',function(){copyText(b.getAttribute('data-copy'),b)})});
+  box.querySelector('#reset').addEventListener('click',function(){state={xp:0,done:{},streak:0,last:''};save();try{localStorage.removeItem(AT)}catch(e){}stats();box.querySelector('#reset-note').textContent='Progress cleared.'});
+}
+
+function route(force){
+  var k=(location.hash||'').slice(1);if(!force&&k===shown)return;shown=k;redraws=[];
+  var v=$('#view');v.textContent='';var i=idx(k),m,gloss=k==='glossary'||/^g-/.test(k);
+  if(i>=0)viewLesson(v,i);
+  else if((m=/^p-(\d+)$/.exec(k))&&PHASES[+m[1]])viewPhase(v,+m[1]);
+  else if(gloss)viewGloss(v,/^g-/.test(k)?k.slice(2):null);
+  else if(k==='about')viewAbout(v);
+  else viewHome(v);
+  cur=i;document.title=gloss?'Glossary | AI From Scratch':'AI From Scratch';
+  if(!/^g-/.test(k)){document.documentElement.scrollTop=0;document.body.scrollTop=0}
+  if(booted&&!/^g-/.test(k)){var t=$('#lesson-title')||$('#view-title');if(t)t.focus({preventScroll:true})}
+  booted=true;
 }
 
 /* ---------- start ---------- */
 function init(){
   load();stats();
-  document.querySelectorAll('[data-copy]').forEach(function(b){b.addEventListener('click',function(){copyText(b.getAttribute('data-copy'),b)})});
+  $('#gl-link').setAttribute('href',GLURL+'#glossary');
   $('#theme').addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');var dark=c?c==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;
     document.documentElement.setAttribute('data-theme',dark?'light':'dark');redraws.forEach(function(f){f()})});
   try{window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){redraws.forEach(function(f){f()})})}catch(e){}
   window.addEventListener('resize',function(){redraws.forEach(function(f){f()})});
-  $('#reset').addEventListener('click',function(){state={xp:0,done:{},streak:0,last:''};save();stats();select(cur,false);$('#reset-note').textContent='Progress cleared.'});
-  var all=flat(),id=(location.hash||'').slice(1),start=-1;all.forEach(function(L,i){if(L.id===id)start=i});
-  if(start<0){start=0;for(var i=0;i<all.length;i++){if(!state.done[all[i].id]){start=i;break}}}
-  window.addEventListener('hashchange',function(){var k=(location.hash||'').slice(1);flat().forEach(function(L,i){if(L.id===k&&i!==cur)select(i,false)})});
-  select(start,false);renderPh();renderGloss();
-  if(/^#g-/.test(location.hash)){var gid=location.hash.slice(3);setTimeout(function(){openGloss(gid,null)},0)}
+  window.addEventListener('hashchange',function(){route(false)});
+  route(true);
 }
 init();
 })();

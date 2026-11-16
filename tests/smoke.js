@@ -7,25 +7,26 @@ const dom=new JSDOM(html,{runScripts:'dangerously',virtualConsole:vc,url:'https:
 const w=dom.window,d=w.document;
 w.addEventListener('error',e=>errs.push('window error: '+e.message));
 const click=el=>el.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
-const steps=[...d.querySelectorAll('.step')];
-console.log('lessons in path:',steps.length,'| phases in map:',d.querySelectorAll('.ph').length,'| live:',d.querySelectorAll('.ph.has').length);
-steps.forEach((s,i)=>{
-  click(s);
+const go=hsh=>{w.location.hash=hsh;w.dispatchEvent(new w.HashChangeEvent('hashchange'))};
+const tiles=[...d.querySelectorAll('.ptile')].map(a=>a.getAttribute('href'));
+const ids=[];tiles.forEach(t=>{go(t);d.querySelectorAll('.lrow').forEach(a=>ids.push(a.getAttribute('href')))});
+console.log('phase tiles:',tiles.length,'| lessons:',ids.length,'| lessons visible on home:',(go('#home'),d.querySelectorAll('.lrow').length));
+ids.forEach((id,i)=>{
+  go(id);
   const title=d.querySelector('#lesson-title').textContent;
-  // demo buttons + chips
   d.querySelectorAll('#demo button').forEach(b=>{ if(!b.disabled)click(b); });
   d.querySelectorAll('#demo input[type=range]').forEach(r=>{const mid=(+r.min+ +r.max)/2;r.value=mid;r.dispatchEvent(new w.Event('input',{bubbles:true}))});
   d.querySelectorAll('#demo button').forEach(b=>{ if(!b.disabled)click(b); });
-  // quiz: click wrong first then right via text hints: try each option until all q solved
   d.querySelectorAll('.q').forEach(q=>{ [...q.querySelectorAll('.opt')].forEach(o=>{ if(!o.disabled) click(o); }); });
   const banner=d.querySelector('#banner').textContent;
-  console.log(i+1,title,'| banner:',banner.slice(0,45));
+  if(!/Lesson complete|already finished/.test(banner))console.log('NO BANNER',i+1,title);
 });
 console.log('xp',d.querySelector('#st-xp').textContent,'streak',d.querySelector('#st-streak').textContent,'done',d.querySelector('#st-done').textContent+'/'+d.querySelector('#st-total').textContent);
-// phase map interactions
-d.querySelectorAll('.ph').forEach(b=>click(b));
-d.querySelectorAll('#phdetail .chip').forEach(b=>click(b));
+go('#home');console.log('home tiles fully done:',d.querySelectorAll('.ptile.all').length);
+go('#glossary');console.log('glossary terms:',d.querySelectorAll('.gent').length,'| glossary on home:',(go('#home'),d.querySelectorAll('.gent').length));
+go('#g-rag');console.log('hit:',d.querySelector('.gent.hit dfn').textContent);
+go(ids[0]);const g=d.querySelector('a.gl');console.log('term link target:',g&&g.getAttribute('target'),g&&g.getAttribute('href'));
 click(d.querySelector('#theme'));
-click(d.querySelector('#reset'));
+go('#about');click(d.querySelector('#reset'));
 console.log('after reset xp',d.querySelector('#st-xp').textContent);
 console.log('ERRORS:',errs.length?errs:'none');
