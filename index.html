@@ -293,6 +293,20 @@ a.chip:hover,.chip:hover{border-color:var(--accent)}
 .peek ul{margin:0;padding:0;list-style:none;display:grid;gap:2px;font-size:.875rem;line-height:1.45}
 .peek li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .peek .more{margin-top:auto;font-size:.8125rem;color:var(--ink2)}
+.pre{display:grid;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.pre p{margin:0}
+.lpre{font-size:.9375rem;color:var(--ink2);background:var(--well);border-radius:10px;padding:8px 12px}
+.lpre strong{color:var(--ink)}
+.plain{margin:0;padding-left:20px;display:grid;gap:6px}
+a.plink{text-decoration:none;color:var(--ink)}
+a.plink:hover{outline:2px solid var(--accent);outline-offset:0}
+.pracs{display:grid;gap:14px}
+.prac{display:grid;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px;min-width:0}
+.prac h2{font-size:1.1875rem}
+.prac p{margin:0}
+.pans{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:12px}
+.pans h3{font-size:1rem}
+.check .badge{margin-left:8px}
 @media (max-width:520px){
   .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .ptile{min-height:136px;padding:14px}
@@ -355,7 +369,7 @@ python3 phases/01-math-foundations/01-linear-algebra-intuition/code/vectors.py</
     <div class="row"><button class="btn ghost small" id="reset" type="button">Reset my progress</button><span class="note" id="reset-note" role="status"></span></div>
   </template>
 
-  <p class="foot">An independent explainer written from the public README of rohitg00/ai-engineering-from-scratch. It is not affiliated with the course. Numbers inside the demos are made up for teaching and do not come from the course. <a href="#about">Where to start in the real course</a></p>
+  <p class="foot">An independent explainer written from the public README of rohitg00/ai-engineering-from-scratch. It is not affiliated with the course. Numbers inside the demos are made up for teaching and do not come from the course. See the <a href="#prereqs">prerequisites</a> and <a href="#about">where to start in the real course</a>.</p>
 </div>
 
 <script>
@@ -1920,6 +1934,236 @@ DEMOS.dual=function(host){
   var c1=ctl('dplan','Plans per second',1,5,1,plan,function(v){return Math.round(v)},function(v){plan=Math.round(v);draw()}),c2=ctl('dact','Actions per second',10,100,10,act,function(v){return Math.round(v)},function(v){act=Math.round(v);draw()});
   host.append(c1.row,c2.row,box,say);draw();
 };
+/* ---- Phase 2: ML system design, monitoring and drift, feature stores (course lessons 19 to 21) ---- */
+function Phi(z){var t=1/(1+0.3275911*Math.abs(z)/Math.SQRT2),y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-z*z/2);return z>=0?(1+y)/2:(1-y)/2}
+
+DEMOS.sdtask=function(host){tabs(host,{intro:'A business goal is not an ML task yet. Tap each goal to see it turned into one.',tabs:[
+ {label:'Reduce churn',text:'Predict: the chance a user cancels in the next 30 days\nDecision: send a save offer to the top 5 percent each night\nTask type: binary classification',say:'It names who (a user), by when (30 days) and what happens next (an offer).'},
+ {label:'Cut fraud losses',text:'Predict: the chance a payment is fraud\nDecision: approve, review or block within 100 ms\nTask type: binary classification',say:'The decision has a time limit, which shapes the whole design.'},
+ {label:'Keep shelves stocked',text:'Predict: units sold per store per day next week\nDecision: how much to order for each store\nTask type: forecasting',say:'The prediction is a number, not a yes or no.'},
+ {label:'Show relevant items',text:'Predict: a relevance score for each user and item pair\nDecision: the order of items in the feed\nTask type: ranking',say:'Only the order matters, so it is a ranking task.'}]})};
+
+DEMOS.sdwhen=function(host){sorter(host,{intro:'Should each case use a learned model, or is a rule the better system?',choices:['Use a rule','Use ML'],end:'A rule is cheaper to run, test and explain. ML pays off when the rule has grown long and fragile.',items:[
+ {t:'Flag any order above $10,000 for review. The rule has been right for years.',a:0,why:'A short rule reaches the goal and stays correct.'},
+ {t:'Spam filter with 200 hand-written rules that break every month.',a:1,why:'A long, fragile rule set is easier to maintain as a learned model.'},
+ {t:'Predict which tickets to escalate, but there are no labels and no way to collect them.',a:0,why:'No labels means nothing to learn from.'},
+ {t:'A churn score that nobody on the team will act on.',a:0,why:'If nobody acts, a better prediction changes nothing.'},
+ {t:'Rank a feed of millions of items for each user, with click data for every view.',a:1,why:'Plenty of labels, and no short rule could do it.'},
+ {t:'A decision where one error is unacceptable and no person can check the output.',a:0,why:'Models are sometimes wrong. Do not use one here.'}]})};
+
+DEMOS.sdmetric=function(host){sorter(host,{intro:'A churn system is measured at three layers, plus guardrails. Which layer is each number?',choices:['Offline','Online','Business','Guardrail'],end:'The layers often disagree. Pick the offline metric that matches the decision, and decide the metrics before the model.',items:[
+ {t:'Precision in the top 5 percent, on held-out past data.',a:0,why:'Measured before launch on past data.'},
+ {t:'Offer acceptance rate on live traffic this week.',a:1,why:'Measured during launch on real traffic.'},
+ {t:'30-day churn in the treated group versus a holdout group.',a:2,why:'The company outcome, measured with an experiment.'},
+ {t:'Unsubscribe rate must not rise.',a:3,why:'A limit that must not get worse.'},
+ {t:'p99 latency stays under the budget.',a:3,why:'Watched all the time as a limit.'},
+ {t:'Share of users that got a score today.',a:1,why:'A live health number.'}]})};
+
+DEMOS.sdbase=function(host){
+  var m=0.564,RULE=0.5,MIN=0.02,bx,say=h('p',{class:'result','aria-live':'polite'});
+  function draw(){bx.set([{label:'Model',pct:m*100,val:m.toFixed(3)},{label:'Rule: idle days',pct:RULE*100,val:'0.500'},{label:'Random guess',pct:23.2,val:'0.232'},{label:'Majority class',pct:0,val:'0.000'}]);
+    var lift=m-RULE;say.textContent='Lift over the strongest baseline: '+(lift>=0?'+':'')+lift.toFixed(3)+'. '+(lift>=MIN?'Above the minimum lift of 0.02, so the model earns its place.':'Below the minimum lift of 0.02. Ship the rule.')}
+  host.append(h('p',{class:'note',text:'F1 scores from the course demo on synthetic churn data. Drag the model score.'}));bx=bars(host);
+  var c=ctl('sdb','Model F1',0.3,0.8,0.002,m,function(v){return (+v).toFixed(3)},function(v){m=+v;draw()});host.append(c.row,say);draw();
+};
+
+DEMOS.sdleak=function(host){sorter(host,{intro:'A churn model predicts at night who will cancel in the next 30 days. Is each feature safe, or does it leak the answer?',choices:['Safe','Leaks the label'],end:'Every feature must exist at the moment of the prediction. Also write down the label source, the label delay and who owns it.',items:[
+ {t:'Days since the last purchase, as of tonight.',a:0,why:'It exists at prediction time.'},
+ {t:'Cancellation reason from the cancellations table.',a:1,why:'It is written after the user cancels, so it contains the answer.'},
+ {t:'Number of support tickets in the last 30 days.',a:0,why:'Known tonight.'},
+ {t:'A "dispute opened" flag set weeks after a payment.',a:1,why:'Written after the outcome.'},
+ {t:'Plan type and sign-up date.',a:0,why:'Known before the prediction.'}]})};
+
+DEMOS.sdbudget=function(host){
+  var q=400,l=50,say=h('p',{class:'result','aria-live':'polite'}),box=h('pre',{class:'pf'});
+  function draw(){var n=q*l/1000;box.textContent='requests in progress = throughput x latency\n'+q+' per second x '+(l/1000)+' s = '+(Math.round(n*10)/10);
+    say.textContent=(Math.round(n*10)/10)+' requests are in flight at any moment. '+(n>200?'That needs many replicas. Cut latency or add capacity.':'Size for the busiest minute, not the daily average.')}
+  host.append(h('p',{class:'note',text:'Little\'s law links peak traffic and latency. Drag both.'}));
+  var a=ctl('sdq','Peak requests per second',50,2000,50,q,function(v){return Math.round(v)},function(v){q=Math.round(v);draw()}),b=ctl('sdl','Latency per request',5,500,5,l,function(v){return Math.round(v)+' ms'},function(v){l=Math.round(v);draw()});
+  host.append(a.row,b.row,box,say);draw();
+};
+
+DEMOS.sdserve=function(host){
+  var P={churn:['Nightly churn scores',2,0.3,40,24,100],feed:['Feed ranking',5,2,120,2,80],fraud:['Fraud check at payment',10,0.8,60,0.05,50]},cur='churn',st={},row=h('div',{class:'chips'}),box=h('pre',{class:'pf'}),say=h('p',{class:'result','aria-live':'polite'}),cs={};
+  function money(v){return '$'+v.toFixed(2)+' a day'}
+  function draw(){row.textContent='';Object.keys(P).forEach(function(k){row.append(h('button',{class:'chip',type:'button',text:P[k][0],'aria-pressed':cur===k?'true':'false',onclick:function(){load(k)}}))});
+    var ref=st.stale-1,bOK=ref>0,runs=bOK?24/ref:0,bCost=bOK?st.ent*runs*0.40+st.req*0.25:Infinity,rep=Math.max(2,Math.ceil(st.qps/200)),oCost=rep*0.5*24,oOK=35<=st.lat;
+    box.textContent='Batch:  '+(bOK?money(bCost)+', '+runs.toFixed(1)+' runs a day over '+st.ent+' million, read in 4 ms':'not possible. The freshness limit is shorter than one 1-hour job.')+
+      '\nOnline: '+(oOK?money(oCost)+', '+rep+' replicas for '+st.qps+' peak requests a second, 35 ms':'too slow. 35 ms is over the '+st.lat+' ms budget.');
+    var pick=bOK&&(!oOK||bCost<=oCost)?'batch':oOK?'online':null;
+    say.textContent=pick?'Choose '+pick+'. '+(pick==='batch'?'Scores can be a little old, so a scheduled job is cheapest.':'It needs fresher data than a batch job can give, or batch costs more.'):'Nothing fits. Change the budgets.'}
+  function load(k){cur=k;var p=P[k];st={ent:p[1],req:p[2],qps:p[3],stale:p[4],lat:p[5]};cs.e.set(st.ent);cs.s.set(Math.max(0.5,st.stale));cs.q.set(st.qps);st.stale=p[4];draw()}
+  host.append(h('p',{class:'note',text:'The course cost model with round, made-up prices. Pick a workload, then drag.'}),row);
+  cs.e=ctl('sve','Things to score (millions)',1,20,1,2,function(v){return Math.round(v)+' M'},function(v){st.ent=Math.round(v);draw()});
+  cs.s=ctl('svs','Scores may be this old',0.5,48,0.5,24,function(v){return (+v)+' h'},function(v){st.stale=+v;draw()});
+  cs.q=ctl('svq','Peak requests per second',10,2000,10,40,function(v){return Math.round(v)},function(v){st.qps=Math.round(v);draw()});
+  host.append(cs.e.row,cs.s.row,cs.q.row,box,say);load('churn');
+};
+
+DEMOS.sdroll=function(host){flow(host,{stages:['Shadow','Canary','A/B test','Roll back'],steps:[
+ {at:0,say:'Shadow: the new model scores a copy of live traffic. Its output is logged and never used.',box:'compare with the current model:\n  latency, error rate, spread of scores'},
+ {at:1,say:'Canary: the new model makes real decisions for a small share of traffic.',box:'1 to 5 percent of traffic\nwiden in steps while the guardrails hold'},
+ {at:2,say:'A/B test: a random split of users sees each model. This measures the business metric.',box:'needs enough traffic and enough time\nto see a real difference'},
+ {at:3,say:'Every stage needs a rollback that takes minutes. Keep the old version running and switch by configuration.',box:'guardrail broke -> switch traffic back\nno new deploy needed'}]})};
+
+DEMOS.sdloop=function(host){tabs(host,{intro:'A feedback loop: the model\'s decisions change the data that trains its next version. Three shapes of it.',tabs:[
+ {label:'Churn offers',text:'The model sends save offers.\nOffers keep some at-risk users.\nNext month those users look loyal.',say:'The retrained model learns that their features do not predict churn.'},
+ {label:'Fraud blocks',text:'The model blocks a payment.\nA blocked payment never gets a chargeback label.',say:'The blocked region slowly looks safe to the next model.'},
+ {label:'Feed ranking',text:'The model shows its top items.\nOnly shown items can collect clicks.',say:'The current top items look like the only good ones.'},
+ {label:'The fix',text:'Keep some data the model did not influence:\n- a small random group that never gets the intervention\n- a small share of random decisions\n- log the score and the decision with every row',say:'Later training can then tell influenced data from clean data.'}]})};
+
+DEMOS.sdfail=function(host){sorter(host,{intro:'Decide the default before the incident. What should the system do in each failure?',choices:['Use the simple rule','Serve last good scores','Use a default value and log it','Pause and alert a person'],end:'The heuristic baseline is the default for most failures, so build it first.',items:[
+ {t:'The model service times out.',a:0,why:'Fall back to the heuristic baseline.'},
+ {t:'The nightly batch job fails.',a:1,why:'Old scores stay useful for a fixed time, then use the rule.'},
+ {t:'A feature is missing or out of range.',a:2,why:'Use the documented default and record the event.'},
+ {t:'A brand new user with no history.',a:0,why:'Use the rule or the population average.'},
+ {t:'The spread of scores moves suddenly.',a:3,why:'Wrong decisions at scale are worse than no automatic decisions.'}]})};
+
+DEMOS.sddoc=function(host){
+  var IT=[['Business goal in one sentence',0,1],['ML task type named',0,1],['The decision that uses each prediction',1,0],['Why a rule is not enough',0,0],['Offline metrics',0,1],['Online metrics',0,0],['The business metric the model must move',1,0],['Guardrail metrics',0,0],['A heuristic or current-system baseline',1,0],['Where labels come from',0,1],['Label delay in days',0,0],['Every feature exists at prediction time',1,0],['Latency, peak traffic and daily cost budgets',0,0],['A serving mode that fits those budgets',0,0],['A shadow or canary stage, plus rollback',1,0],['Feedback loop risk and its fix',0,0],['A default action for every failure',1,0],['What you monitor after launch',0,0]],
+  on=IT.map(function(x){return !!x[2]}),list=h('div',{class:'cks'}),say=h('p',{class:'result','aria-live':'polite'});
+  function draw(){var w=0,tot=0,blk=0;IT.forEach(function(x,i){var wt=x[1]?2:1;tot+=wt;if(on[i])w+=wt;else if(x[1])blk++});var s=w/tot;
+    say.textContent='Score '+s.toFixed(2)+'. '+(blk?blk+' blocking item'+(blk>1?'s':'')+' missing. Verdict: revise.':s>=0.85?'No blockers. Verdict: ready for review.':'No blockers, but the score is under 0.85. Verdict: revise.')}
+  IT.forEach(function(x,i){var id='sdd-'+i,cb=h('input',{type:'checkbox',id:id});cb.checked=on[i];cb.addEventListener('change',function(){on[i]=cb.checked;draw()});
+    list.append(h('label',{class:'check',for:id},cb,h('span',null,x[0],x[1]?h('span',{class:'badge later',text:'blocking'}):null)))});
+  host.append(h('p',{class:'note',text:'The course checker scores a design document on 18 items. It starts as the weak example document. Tick items to fix it.'}),list,say);draw();
+};
+
+DEMOS.monlayers=function(host){sorter(host,{intro:'A deployed model is watched at four layers. Which layer is each signal?',choices:['System health','Inputs','Predictions','Outcomes'],end:'The first three warn early. Only outcomes measure correctness, and they arrive late.',items:[
+ {t:'p99 latency and error rate.',a:0,why:'Does the service answer?'},
+ {t:'Share of missing values in a feature.',a:1,why:'Does live data look like training data?'},
+ {t:'The positive rate of the model\'s answers.',a:2,why:'Does the model behave as before?'},
+ {t:'Accuracy on payments whose chargeback labels have arrived.',a:3,why:'Is the model still right? Needs labels.'},
+ {t:'A new category appears in the payment channel.',a:1,why:'An input change.'},
+ {t:'The spread of scores shifts upward.',a:2,why:'A prediction change.'}]})};
+
+DEMOS.driftkind=function(host){sorter(host,{intro:'Three kinds of drift. Which one is each change in a payment model?',choices:['Covariate drift','Prior drift','Concept drift'],end:'Input monitors see covariate drift. Prediction and outcome monitors see prior drift. Only outcome monitors see concept drift.',items:[
+ {t:'A campaign brings in app users with larger baskets. Risk per basket is unchanged.',a:0,why:'The inputs changed. The rule from input to label did not.'},
+ {t:'During an attack the fraud rate doubles, and fraud looks the same as before.',a:1,why:'The label rate changed.'},
+ {t:'Fraudsters change tactics. The same basket now has a different fraud risk.',a:2,why:'The link between input and label changed.'},
+ {t:'Feature monitors are quiet, but accuracy falls once labels arrive.',a:2,why:'Nothing upstream of the label moved.'},
+ {t:'Traffic moves to a new country with different order sizes.',a:0,why:'A change in the inputs.'}]})};
+
+DEMOS.labdelay=function(host){tabs(host,{intro:'The true outcome arrives after the prediction. How late depends on the problem.',tabs:[
+ {label:'Ad click',text:'Label arrives in: seconds',say:'You can measure accuracy almost live.'},
+ {label:'30-day churn',text:'Label arrives in: 30 days',say:'You only know at the end of the 30-day window.'},
+ {label:'Card fraud',text:'Label arrives: when the chargeback comes, often weeks later',say:'Recent traffic has no outcome yet.'},
+ {label:'Loan default',text:'Label arrives in: months or years',say:'Outcome monitoring is very slow here.'},
+ {label:'Meanwhile',text:'Watch inputs and predictions now.\nJoin labels when they arrive.\nCompute outcome metrics on the labeled part only.',say:'This is why input and prediction monitors matter.'}]})};
+
+DEMOS.windows=function(host){tabs(host,{intro:'Every drift test compares a reference window with a current window. Window size is a trade-off.',tabs:[
+ {label:'Reference window',text:'The training data, or a period of production you checked by hand.\nIt stays fixed until you retrain.',say:'After retraining, reset it to the new training data.'},
+ {label:'Small current window',text:'Reacts quickly.\nBut it scores noise as drift.',say:'More false alarms.'},
+ {label:'Large current window',text:'Stable.\nBut it reports a change late.',say:'Fewer false alarms, slower warning.'},
+ {label:'Sliding or tumbling',text:'Sliding: moves by a step smaller than its size, so windows overlap.\nTumbling: moves by its full size.',say:'The course demo uses size 500 and step 250.'},
+ {label:'Seasonality',text:'Monday traffic differs from Saturday traffic.\nMake the reference cover a full cycle, or compare with the same period in an earlier cycle.',say:'Otherwise every weekend looks like drift.'}]})};
+
+DEMOS.psi=function(host){
+  var Z=[-1.2816,-0.8416,-0.5244,-0.2533,0,0.2533,0.5244,0.8416,1.2816],sh=0,sp=1,bx,say=h('p',{class:'result','aria-live':'polite'});
+  function draw(){var psi=0,rows=[],prev=0;for(var i=0;i<10;i++){var up=i<9?Phi((Z[i]-sh)/sp):1,c=Math.max(0.0001,up-prev);prev=up;psi+=(c-0.1)*Math.log(c/0.1);rows.push({label:'Bin '+(i+1),pct:Math.min(100,c*250),val:(c*100).toFixed(1)+'%'})}
+    bx.set(rows);say.textContent='PSI = '+psi.toFixed(3)+'. '+(psi<0.1?'Below 0.1: stable.':psi<0.25?'0.1 to 0.25: a moderate shift.':'Above 0.25: a significant shift.')}
+  host.append(h('p',{class:'note',text:'Ten bins each hold 10% of the reference data. Shift the current data and watch the bins fill unevenly.'}));bx=bars(host);
+  var a=ctl('psh','Shift of current data',0,1.5,0.05,0,function(v){return (+v).toFixed(2)+' sd'},function(v){sh=+v;draw()}),b=ctl('psp','Spread of current data',0.5,2,0.05,1,function(v){return (+v).toFixed(2)+'x'},function(v){sp=+v;draw()});
+  host.append(a.row,b.row,say);draw();
+};
+
+DEMOS.ksd=function(host){
+  var sh=0.02,n=1000000,say=h('p',{class:'result','aria-live':'polite'}),box=h('pre',{class:'pf'});
+  function draw(){var D=0;for(var x=-5;x<=6.5;x+=0.01){var g=Math.abs(Phi(x)-Phi(x-sh));if(g>D)D=g}
+    var en=Math.sqrt(n/2),lam=(en+0.12+0.11/en)*D,p=1;if(lam>0.3){p=0;for(var k=1;k<=100;k++)p+=2*(k%2?1:-1)*Math.exp(-2*k*k*lam*lam);p=Math.max(0,Math.min(1,p))}
+    var sig=p<0.005,big=D>=0.10;
+    box.textContent='D (largest gap between the two curves) = '+D.toFixed(3)+'\np-value = '+(p<1e-4?p.toExponential(1):p.toFixed(4))+'\nstatistically significant: '+(sig?'yes':'no')+'\neffect size D at least 0.10: '+(big?'yes':'no');
+    say.textContent=sig&&big?'Both pass. Alert.':sig?'Significant, but the gap is tiny. With this much data any small gap is "significant". No alert.':'No alert.'}
+  host.append(h('p',{class:'note',text:'KS compares two samples with no bins. Start: a shift nobody cares about, with a million events per window.'}));
+  var a=ctl('kss','Shift of current data',0,1,0.01,sh,function(v){return (+v).toFixed(2)+' sd'},function(v){sh=+v;draw()}),b=ctl('ksn','Events per window (thousands)',0.5,1000,0.5,1000,function(v){return (+v)+'k'},function(v){n=Math.round(v*1000);draw()});
+  host.append(a.row,b.row,box,say);draw();
+};
+
+DEMOS.chisq=function(host){
+  var app=30,wal=0,REF=[300,150,50,0],say=h('p',{class:'result','aria-live':'polite'}),box=h('pre',{class:'pf'});
+  function draw(){var rest=100-app-wal,web=Math.max(0,rest*6/7),store=Math.max(0,rest-web),CUR=[web*5,app*5,store*5,wal*5],chi=0,k=0;
+    for(var c=0;c<4;c++){var col=REF[c]+CUR[c];if(col<=0)continue;k++;[REF[c],CUR[c]].forEach(function(o){var e=500*col/1000;chi+=(o-e)*(o-e)/e})}
+    var dof=k-1,p=dof===2?Math.exp(-chi/2):2*(1-Phi(Math.sqrt(chi)))+Math.sqrt(2*chi/Math.PI)*Math.exp(-chi/2),V=Math.sqrt(chi/1000);
+    box.textContent='reference: web 60%, app 30%, store 10%\ncurrent:   web '+(web).toFixed(0)+'%, app '+app+'%, store '+store.toFixed(0)+'%'+(wal?', wallet '+wal+'% (new)':'')+
+      '\nchi-square = '+chi.toFixed(1)+', p = '+(p<1e-4?p.toExponential(1):p.toFixed(4))+", Cramer's V = "+V.toFixed(3);
+    say.textContent=p<0.005&&V>=0.10?'Both the p-value and the effect size pass. Drift.':p<0.005?'Significant but small. A warning, not an alert.':'No drift.'}
+  host.append(h('p',{class:'note',text:'Payment channel is a category, so use a chi-square test. 500 events in each window. Change the mix.'}));
+  var a=ctl('cha','App share now',30,70,1,app,function(v){return Math.round(v)+'%'},function(v){app=Math.round(v);draw()}),b=ctl('chw','New "wallet" channel',0,20,1,wal,function(v){return Math.round(v)+'%'},function(v){wal=Math.round(v);draw()});
+  host.append(a.row,b.row,box,say);draw();
+};
+
+DEMOS.falarm=function(host){
+  var f=50,c=24,al=0.05,say=h('p',{class:'result','aria-live':'polite'}),box=h('pre',{class:'pf'});
+  function draw(){var n=f*c*al;box.textContent=f+' features x '+c+' checks a day x '+al.toFixed(2)+' false-alarm rate\n= about '+(Math.round(n*10)/10)+' false alarms a day when nothing changed\n\nWith a Bonferroni correction each test uses '+(al/f).toFixed(4)+',\nso about '+(Math.round(c*al*10)/10)+' a day in total.';
+    say.textContent=n>10?'People stop reading alerts long before this.':'Manageable. Still add an effect size and a persistence rule.'}
+  host.append(h('p',{class:'note',text:'Each test has a small false-alarm rate. Monitoring runs many tests.'}));
+  var a=ctl('faf','Features watched',1,100,1,f,function(v){return Math.round(v)},function(v){f=Math.round(v);draw()}),b=ctl('fac','Checks per day',1,24,1,c,function(v){return Math.round(v)},function(v){c=Math.round(v);draw()}),d=ctl('faa','False-alarm rate per test',0.01,0.10,0.01,al,function(v){return (+v).toFixed(2)},function(v){al=+v;draw()});
+  host.append(a.row,b.row,d.row,box,say);draw();
+};
+
+DEMOS.retrain=function(host){sorter(host,{intro:'The kind of drift decides what helps. Pick the useful action.',choices:['Keep watching','Retrain on recent data','Recalibrate or move the threshold','Collect new labels first'],end:'After retraining: test on the newest labeled data, roll out with shadow and canary, then reset the reference window.',items:[
+ {t:'Inputs drifted, but accuracy is stable.',a:0,why:'Often nothing is needed. Watch the outcome metric.'},
+ {t:'Traffic moved into a region with little training data.',a:1,why:'Recent data that covers the new region helps.'},
+ {t:'The fraud rate doubled, and fraud looks the same.',a:2,why:'Prior drift: fix the scores or the threshold.'},
+ {t:'The same inputs now mean a different answer.',a:3,why:'Concept drift: old labels teach the old concept again.'}]})};
+
+DEMOS.fsread=function(host){sorter(host,{intro:'One feature, two readers. Is each need from training or from serving?',choices:['Training (offline)','Serving (online)'],end:'A feature store fills both stores from one set of definitions. Materialization copies the latest values from offline to online.',items:[
+ {t:'"What was the value for each of 10 million user and time pairs?"',a:0,why:'Many points in the past.'},
+ {t:'"What is the value for this one user right now?"',a:1,why:'One row, the present.'},
+ {t:'Minutes of latency are fine.',a:0,why:'A training job can wait.'},
+ {t:'Must answer in a few milliseconds.',a:1,why:'A request is waiting.'},
+ {t:'Needs the full history with timestamps.',a:0,why:'The offline store.'},
+ {t:'Needs only the latest value per entity, in a key-value database.',a:1,why:'The online store.'}]})};
+
+DEMOS.fsterms=function(host){tabs(host,{intro:'Four terms describe every feature row.',tabs:[
+ {label:'Entity',text:'The key the feature describes.\nExamples: user_id, card_id',say:'Every row belongs to one entity.'},
+ {label:'Event timestamp',text:'When the value became true.\nA purchase count "as of day 14" has event timestamp day 14.',say:'Joins use this time.'},
+ {label:'Created timestamp',text:'When the system wrote the row.\nA backfill run today writes old event timestamps with a new created timestamp.',say:'It reveals rows that were written later.'},
+ {label:'TTL',text:'Time to live: the maximum age of a value.\nOlder than the TTL counts as missing, so the reader uses the default.',say:'It stops very old values from being used.'}]})};
+
+DEMOS.pit=function(host){
+  var ROWS=[[7,4],[14,3],[21,1],[28,0]],day=16,ttl=14,box=h('pre',{class:'pf'}),say=h('p',{class:'result','aria-live':'polite'});
+  function draw(){var pick=null;ROWS.forEach(function(r){if(r[0]<=day)pick=r});var stale=pick&&day-pick[0]>ttl;
+    box.textContent='label day: '+day+'\n\nrow day   purchases_30d\n'+ROWS.map(function(r){return '  '+(r[0]<10?' ':'')+r[0]+'        '+r[1]+'      '+(pick&&r===pick?(stale?'<- latest before the label, but older than the TTL':'<- point-in-time join picks this'):r[0]>day?'(future)':'')+(r[0]===28?'   <- naive join picks this':'')}).join('\n');
+    say.textContent=!pick?'No row exists yet. Use the default value.':stale?'The newest allowed row is too old, so it counts as missing. Use the default.':day>=28?'Here both joins agree, because no row is in the future.':'The naive join reads day 28, from after the label day. It already shows the user going quiet, which is the answer.'}
+  host.append(h('p',{class:'note',text:'One user, weekly feature rows, and a label on a chosen day. Which row may training use?'}));
+  var a=ctl('pid','Label day',5,30,1,day,function(v){return 'day '+Math.round(v)},function(v){day=Math.round(v);draw()}),b=ctl('pit','TTL',3,21,1,ttl,function(v){return Math.round(v)+' days'},function(v){ttl=Math.round(v);draw()});
+  host.append(a.row,b.row,box,say);draw();
+};
+
+DEMOS.skewcause=function(host){sorter(host,{intro:'Training and serving disagree about a feature. Which cause is it?',choices:['Two code paths','Stale features','Different defaults','Time travel'],end:'One definition that both paths call removes all four.',items:[
+ {t:'The serving window includes one extra day that the training window does not.',a:0,why:'The feature was written twice, slightly differently.'},
+ {t:'Training read weekly snapshots, and serving computes fresh values.',a:1,why:'The values have different ages.'},
+ {t:'For a new user, training fills 365 and serving fills -1.',a:2,why:'A missing value is filled two ways.'},
+ {t:'The training join reads the newest snapshot for every label.',a:3,why:'It reads values from after the label time.'}]})};
+
+DEMOS.registry=function(host){flow(host,{stages:['Define once','Backfill','Train','Serve'],steps:[
+ {at:0,say:'The registry holds one definition per feature. Both paths read it. No service keeps a private copy.',box:'name: purchases_30d\nentity: user_id\nwindow: 30 days\ndefault: 0\nTTL: 14 days\nowner, version, description'},
+ {at:1,say:'A new feature has no history. A backfill runs the definition at each past date.',box:'for each past date:\n  read only events at or before that date\n  write one row per user'},
+ {at:2,say:'Training joins labels to those rows with a point-in-time join.',box:'label time -> latest row at or before it'},
+ {at:3,say:'Serving reads the latest value from the online store. A change to a definition makes a new version, so old models keep their feature.',box:'online store: latest value per user\nv1 stays for old models, v2 for new ones'}]})};
+
+DEMOS.skewfind=function(host){tabs(host,{intro:'Log features at serving time, then compare three pairs. Numbers are from the course demo for days_since_last_purchase.',tabs:[
+ {label:'Online read vs training join',text:'Tests the whole system.\nMismatch: 0.0%',say:'One definition and the same snapshots, so no skew.'},
+ {label:'Fresh compute vs training join',text:'Isolates staleness.\nMismatch: 83.0%, mean difference 2.77',say:'Training used weekly snapshots, so the ages differ.'},
+ {label:'Second code path vs fresh compute',text:'Isolates code differences such as windows and defaults.\nMismatch: 5.5%, mean difference 20.07',say:'Few rows differ, but by a lot: the -1 versus 365 default.'}]})};
+
+DEMOS.sdlaunch=function(host){flow(host,{stages:['Task','Metrics','Baselines','Data','Budgets','Shadow','Canary','A/B test'],steps:[
+ {at:0,say:'Name the prediction, the entity, the horizon and the decision that uses it.',box:'"Will this user cancel in the next 30 days,\nso tonight\'s job can pick who gets an offer?"'},
+ {at:1,say:'Pick offline, online, business and guardrail metrics before the model.',box:'offline -> online -> business\nguardrails must not get worse'},
+ {at:2,say:'Trivial, heuristic and current system. Set a minimum lift first.',box:'lift = model score - strongest baseline'},
+ {at:3,say:'Check the label source, the label delay, and that every feature exists at prediction time.',box:'no feature written after the outcome'},
+ {at:4,say:'Set p99 latency, peak traffic, cost per day and how old a score may be.',box:'these choose batch or online serving'},
+ {at:5,say:'The new model scores a copy of live traffic. Nobody uses its output.',box:'compare latency, errors and scores'},
+ {at:6,say:'Real decisions for 1 to 5 percent of traffic. Roll back when a guardrail breaks.',box:'widen in steps'},
+ {at:7,say:'A random user split. Measure the business metric with a statistical test.',box:'then monitor for drift and skew'}]})};
+
+DEMOS.sdfixes=function(host){sorter(host,{intro:'From the course cheat sheet: match each symptom to its fix.',choices:['Use the heuristic baseline','Point-in-time join','One registry definition','Collect new labels, then retrain','Bonferroni, effect size, persistence'],end:'Most production ML failures are design failures with a known fix.',items:[
+ {t:'The model service times out.',a:0,why:'No plan for the failure. Fall back to the rule.'},
+ {t:'Offline accuracy 0.948, live accuracy worse.',a:1,why:'The naive join read future rows.'},
+ {t:'Serving fills -1 for a new user, training fills 365.',a:2,why:'Two code paths.'},
+ {t:'Accuracy drops while the inputs stay quiet.',a:3,why:'Concept drift.'},
+ {t:'60 false alarms a day.',a:4,why:'50 features checked hourly at 0.05.'}]})};
 /* ================= WATCH: step-through animations ================= */
 WATCH.git={label:'An animated commit graph: a branch is created, gets a commit, and is merged back into main.',height:230,hold:3000,steps:[
  {say:'A repository starts with one commit on main.',cmd:'git commit -m "start"'},
@@ -2990,6 +3234,202 @@ lesson(12,{id:'dual-system',short:'Dual system robots',title:'A slow planner and
   quiz:[{q:'Which part is System 1?',o:['The small fast action model', 'The large planner', 'The camera'],a:0,why:'It acts at a high rate.',hint:'Fast reflexes.'},
         {q:'Why not use one big model for everything?',o:['It would be too slow to control movement', 'It is cheaper', 'It cannot see'],a:0,why:'Movement needs many commands per second.',hint:'Check the rates.'}],
   links:[['Embodied VLAs',PH('12-multimodal-ai/21-embodied-vlas-openvla-pi0-groot')]]});
+/* ---- Phase 2: ML system design, monitoring, feature stores ---- */
+lesson(2,{id:'sd-task',short:'Goal to ML task',title:'Turn a business goal into an ML task',tag:'Behind Phase 2, lesson 19: ML System Design',
+  lead:'A company asks for "a churn model". Someone trains one with a good score, and three months later nobody uses it. The model is one part of a system. First fix four things: what exactly is predicted and for whom, which decision uses it, when it is needed and with which data, and how you will know the decision got better.',
+  demo:'sdtask',takeaway:'"Predict churn" is not a task. "Predict whether this user cancels in the next 30 days, so tonight\'s job can pick who gets an offer" is.',
+  quiz:[{q:'What turns "predict churn" into a real task?',o:['Naming the entity, the time window and the decision that uses it', 'A bigger model', 'More GPUs'],a:0,why:'Those three were left open.',hint:'Look at the churn tab.'},
+        {q:'Showing relevant items in a feed is which task type?',o:['Ranking', 'Forecasting', 'Binary classification'],a:0,why:'Only the order matters.',hint:'Open the last tab.'}],
+  links:[['ML system design',PH('02-ml-fundamentals/19-ml-system-design')]]});
+
+lesson(2,{id:'sd-when-not',short:'When not to use ML',title:'Sometimes the right system is a rule',tag:'Behind Phase 2, lesson 19: ML System Design',
+  lead:'Do not be afraid to launch without machine learning. Skip ML when a short rule works and stays correct, when you have no labels, when nobody acts on the prediction, when the data at prediction time does not hold the signal, when one error is unacceptable, or when the system costs more than the better decisions are worth.',
+  demo:'sdwhen',takeaway:'Start with the rule. Move to ML when the rule gets long and fragile, because a learned model is easier to update.',
+  quiz:[{q:'No labels and no way to collect them. What do you do?',o:['Do not use ML', 'Train anyway', 'Buy more servers'],a:0,why:'There is nothing to learn from.',hint:'Look at the ticket card.'},
+        {q:'When does ML start to pay off?',o:['When the rule has grown long and fragile', 'Always', 'Never'],a:0,why:'A learned model is easier to maintain than a complex heuristic.',hint:'Look at the spam card.'}],
+  links:[['ML system design',PH('02-ml-fundamentals/19-ml-system-design')]]});
+
+lesson(2,{id:'sd-metrics',short:'Three layers of metrics',title:'Offline, online, business, plus guardrails',tag:'Behind Phase 2, lesson 19: ML System Design',
+  lead:'You measure an ML system at three layers. Offline metrics use held-out past data before launch. Online metrics use live traffic. Business metrics come from an experiment weeks later. Guardrails are limits that must not get worse. The layers often disagree, because the past did not contain your model.',
+  demo:'sdmetric',takeaway:'Match the offline metric to the decision. If the job contacts the top 5 percent, measure precision in the top 5 percent. AUC averages over thresholds you never use.',
+  quiz:[{q:'Which metric needs an experiment with a holdout group?',o:['The business metric', 'The offline metric', 'Latency'],a:0,why:'It compares treated users with untreated ones.',hint:'Look at the churn rate card.'},
+        {q:'Why not report only AUC?',o:['It averages over thresholds you never use', 'It is too slow to compute', 'It is illegal'],a:0,why:'Measure at the threshold the decision uses.',hint:'Read the takeaway.'}],
+  links:[['ML system design',PH('02-ml-fundamentals/19-ml-system-design')]]});
+
+lesson(2,{id:'sd-baselines',short:'Baselines and lift',title:'A score means nothing without something to beat',tag:'Behind Phase 2, lesson 19: ML System Design',
+  lead:'An F1 of 0.56 is good if the best alternative reaches 0.30 and poor if a simple rule reaches 0.60. Compare every model with a trivial baseline (always guess the majority), a heuristic baseline (a rule from domain knowledge), and whatever makes the decision today. Lift is the model score minus the strongest baseline.',
+  demo:'sdbase',takeaway:'Set the minimum lift before you look at results. The trivial baseline is weak. The heuristic one is the hard one to beat. If the rule wins, ship the rule.',
+  quiz:[{q:'Lift is measured against which baseline?',o:['The strongest one', 'The weakest one', 'None'],a:0,why:'Beating a weak baseline proves little.',hint:'Look at the rule bar.'},
+        {q:'The model does not beat the rule by the minimum lift. What do you ship?',o:['The rule', 'The model anyway', 'Nothing ever'],a:0,why:'The extra system has not earned its cost.',hint:'Drag the model score down.'}],
+  links:[['ML system design',PH('02-ml-fundamentals/19-ml-system-design')]]});
+
+lesson(2,{id:'sd-data',short:'Data and labels',title:'Where labels come from, how late, and what leaks',tag:'Behind Phase 2, lesson 19: ML System Design',
+  lead:'Before training, answer: which table defines the label and who owns it, how long after the prediction the true outcome arrives, how often the label is wrong, whether every feature exists at prediction time, how many positive examples you have, and whether you hold out the most recent period.',
+  demo:'sdleak',takeaway:'A feature written after the outcome leaks the label. The model looks great offline and fails live.',
+  quiz:[{q:'Why is "cancellation reason" a bad feature for a churn model?',o:['It is written after the user cancels', 'It is too long', 'It is a number'],a:0,why:'It contains the answer.',hint:'Look at the cancellation card.'},
+        {q:'Which period do you hold out for testing?',o:['The most recent one', 'A random one', 'The oldest one'],a:0,why:'It is closest to what the model will face.',hint:'Split by time.'}],
+  links:[['ML system design',PH('02-ml-fundamentals/19-ml-system-design')]]});
+
+lesson(2,{id:'sd-budgets',short:'Latency, traffic and cost',title:'Three numbers that bound every design',tag:'Behind Phase 2, lesson 19: ML System Design',
+  lead:"Every serving design has a latency budget (p99 is the time 99 of 100 requests stay under), a peak throughput, and a cost budget in dollars per day. Little's law links the first two: requests in progress equal throughput times latency. At 400 requests a second and 50 ms each, 20 are in flight at any moment.",
+  demo:'sdbudget',takeaway:'Size for the busiest minute, not the daily average. Peak traffic is often several times the average.',
+  quiz:[{q:'400 requests a second at 50 ms each. How many are in progress?',o:['20', '400', '8'],a:0,why:'400 x 0.05 = 20.',hint:'Use the starting values.'},
+        {q:'Which traffic number do you size for?',o:['The peak', 'The daily average', 'The lowest hour'],a:0,why:'The system must survive the busiest minute.',hint:'Read the takeaway.'}],
+  links:[['ML system design',PH('02-ml-fundamentals/19-ml-system-design')]]});
+
+lesson(2,{id:'sd-serving',short:'Batch or online serving',title:'Precompute the scores, or score each request',tag:'Behind Phase 2, lesson 19: ML System Design',
+  lead:'Batch inference runs a scheduled job that scores everything and stores the results; the app reads a stored score in a few milliseconds. Online inference scores each request when it arrives. Batch cost grows with how many things you score and how often. Online cost grows with peak traffic, because you pay for idle replicas between peaks.',
+  demo:'sdserve',takeaway:'A batch job that takes an hour cannot meet a freshness limit under an hour at any price. A hybrid is common: batch for known users, online for new ones.',
+  quiz:[{q:'Nightly churn scores for 2 million users. Which is cheaper?',o:['Batch', 'Online', 'They cost the same'],a:0,why:'One run a day costs under a dollar in the course model.',hint:'Pick the churn workload.'},
+        {q:'Why can batch not serve a fraud check at payment?',o:['The payment did not exist when the job ran', 'Batch is too expensive', 'Batch is illegal'],a:0,why:'The decision needs the data of the request.',hint:'Pick the fraud workload.'}],
+  links:[['ML system design',PH('02-ml-fundamentals/19-ml-system-design')]]});
+
+lesson(2,{id:'sd-rollout',short:'Shadow, canary, A/B',title:'A new model reaches users in stages',tag:'Behind Phase 2, lesson 19: ML System Design',
+  lead:'First shadow: the new model sees a copy of live traffic and its output is only logged. Then canary: real decisions for 1 to 5 percent of traffic, widened in steps. Then an A/B test with a random split of users to measure the business metric. Every stage needs a rollback that takes minutes.',
+  demo:'sdroll',takeaway:'Keep the old version deployed and switch traffic with configuration, so rolling back is not a new release.',
+  quiz:[{q:"In shadow mode, who sees the new model's output?",o:['Nobody. It is only logged', 'All users', '5 percent of users'],a:0,why:'It runs without affecting anyone.',hint:'Step 1.'},
+        {q:'How should a rollback work?',o:['Switch traffic by configuration in minutes', 'Retrain the old model', 'Wait for the next release'],a:0,why:'The old version stays deployed.',hint:'Step 4.'}],
+  links:[['ML system design',PH('02-ml-fundamentals/19-ml-system-design')],['Shadow and canary for LLMs (Phase 17)',PH('17-infrastructure-and-production/20-shadow-canary-progressive')]]});
+
+lesson(2,{id:'sd-feedback',short:'Feedback loops',title:'When the model changes its own training data',tag:'Behind Phase 2, lesson 19: ML System Design',
+  lead:"A feedback loop exists when the model's decisions change the data that trains its next version. Offers keep users who would have left, blocked payments never get a fraud label, and a feed only collects clicks on what it showed. Each retrain then gets a little worse.",
+  demo:'sdloop',takeaway:'Keep some data the model did not influence, and log the score and the decision with every row.',
+  quiz:[{q:'Why does a fraud model slowly think a blocked region is safe?',o:['Blocked payments never get a chargeback label', 'Fraudsters gave up', 'The servers are slow'],a:0,why:'No outcome means no fraud examples from that region.',hint:'Open the fraud tab.'},
+        {q:'What breaks the loop?',o:['A random holdout that never gets the intervention', 'A bigger model', 'Retraining more often'],a:0,why:'It gives clean data.',hint:'Open the last tab.'}],
+  links:[['ML system design',PH('02-ml-fundamentals/19-ml-system-design')]]});
+
+lesson(2,{id:'sd-failures',short:'Failure modes',title:'Choose the safe default before the incident',tag:'Behind Phase 2, lesson 19: ML System Design',
+  lead:'Every part fails sooner or later: the model service times out, the nightly job fails, a feature is missing, a new user has no history, or the scores suddenly shift. Decide the default action for each one in the design, not at 3 a.m.',
+  demo:'sdfail',takeaway:'The simple rule from your baseline section is also the fallback for most failures. Build it first.',
+  quiz:[{q:'The model service times out. What is the safe default?',o:['Use the heuristic baseline', 'Fail the request', 'Retry forever'],a:0,why:'The rule still gives a reasonable decision.',hint:'First card.'},
+        {q:'The spread of scores jumps suddenly. What then?',o:['Pause automatic actions and alert a person', 'Ignore it', 'Retrain at once'],a:0,why:'Wrong decisions at scale are costly.',hint:'Last card.'}],
+  links:[['ML system design',PH('02-ml-fundamentals/19-ml-system-design')]]});
+
+lesson(2,{id:'sd-design-doc',short:'The design document',title:'One page that catches failures before training',tag:'Behind Phase 2, lesson 19: ML System Design',
+  lead:'The design document records every decision in one place before training starts: problem, metrics, baselines, data, budgets and serving, rollout, feedback loops, failure modes and monitoring. The course checker scores it on 18 items. Six of them block a review, because each one makes the system unsafe or useless.',
+  demo:'sddoc',takeaway:'The six blockers: the decision, the business metric, a real baseline, no leakage, a shadow or canary stage with rollback, and a default for every failure. Ready means a score of at least 0.85 with no blocker missing.',
+  quiz:[{q:'How many items block a review?',o:['6', '18', '1'],a:0,why:'Each makes the system unsafe or useless.',hint:'Count the blocking badges.'},
+        {q:'The score is 0.90 but the rollback plan is missing. Verdict?',o:['Revise', 'Ready for review', 'Ship it'],a:0,why:'A missing blocker always means revise.',hint:'Untick a blocking item.'}],
+  links:[['ML system design',PH('02-ml-fundamentals/19-ml-system-design')]]});
+
+lesson(2,{id:'mon-layers',short:'What to monitor',title:'Four layers, and only one measures correctness',tag:'Behind Phase 2, lesson 20: Monitoring Models in Production',
+  lead:'A deployed model fails without an error message. It keeps returning scores while the world moves away from its training data. Watch four layers: system health, inputs, predictions and outcomes. The first three are available at once. Outcomes need labels, so they arrive late.',
+  demo:'monlayers',takeaway:'Software monitoring checks whether the service answers. Model monitoring checks whether the answers are still right.',
+  quiz:[{q:'Which layer tells you the model is still right?',o:['Outcomes', 'System health', 'Inputs'],a:0,why:'It compares predictions with true labels.',hint:'Look at the accuracy card.'},
+        {q:'Why watch inputs and predictions too?',o:['They warn early, before labels arrive', 'They are prettier', 'They replace outcomes'],a:0,why:'Labels can take weeks.',hint:'Read the end message.'}],
+  links:[['Model monitoring and drift',PH('02-ml-fundamentals/20-model-monitoring-and-drift')]]});
+
+lesson(2,{id:'drift-kinds',short:'Three kinds of drift',title:'What changed: the inputs, the label rate, or the rule between them',tag:'Behind Phase 2, lesson 20: Monitoring Models in Production',
+  lead:'Covariate drift: the inputs change, but the same input still means the same thing. Prior drift: the share of positive labels changes. Concept drift: the same input now means a different answer. Each one is visible to different monitors.',
+  demo:'driftkind',takeaway:'Concept drift leaves the inputs untouched, so input monitors stay green. Only outcome monitors catch it, after the label delay.',
+  quiz:[{q:'Fraudsters change tactics and the same basket is now risky. Which drift?',o:['Concept drift', 'Covariate drift', 'Prior drift'],a:0,why:'The link from input to label changed.',hint:'Look at the tactics card.'},
+        {q:'Which monitors see covariate drift?',o:['Input monitors', 'Only outcome monitors', 'None'],a:0,why:'The inputs themselves moved.',hint:'Read the end message.'}],
+  links:[['Model monitoring and drift',PH('02-ml-fundamentals/20-model-monitoring-and-drift')]]});
+
+lesson(2,{id:'label-delay',short:'Delayed labels',title:'The true answer arrives after the prediction',tag:'Behind Phase 2, lesson 20: Monitoring Models in Production',
+  lead:'You only learn whether a prediction was right once the outcome happens. An ad click takes seconds. Card fraud takes weeks, until the chargeback arrives. A loan default takes months or years. During that gap you have inputs and predictions, but no outcomes.',
+  demo:'labdelay',takeaway:'Monitor inputs and predictions now. Join labels when they arrive and compute outcome metrics on the labeled part only.',
+  quiz:[{q:'When does a card fraud label usually arrive?',o:['Weeks later, with the chargeback', 'In seconds', 'Never'],a:0,why:'The bank reports it later.',hint:'Open the fraud tab.'},
+        {q:'What can you monitor while labels are missing?',o:['Inputs and predictions', 'Accuracy', 'Nothing'],a:0,why:'They are available at once.',hint:'Open the last tab.'}],
+  links:[['Model monitoring and drift',PH('02-ml-fundamentals/20-model-monitoring-and-drift')]]});
+
+lesson(2,{id:'windows',short:'Reference and current windows',title:'Every drift test compares two samples',tag:'Behind Phase 2, lesson 20: Monitoring Models in Production',
+  lead:'The reference window is the training data or a checked period of production. The current window is the most recent events. A small current window reacts fast but mistakes noise for drift. A large one is stable but late.',
+  demo:'windows',takeaway:'Make the reference cover a full cycle, such as a whole week, or weekends will look like drift.',
+  quiz:[{q:'What is the cost of a small current window?',o:['It scores noise as drift', 'It reacts too slowly', 'It uses too much disk'],a:0,why:'Few events means noisy numbers.',hint:'Open the small window tab.'},
+        {q:'How do you handle weekly patterns?',o:['Make the reference cover a full cycle', 'Ignore weekends', 'Use a smaller window'],a:0,why:'Then Monday is compared with Mondays.',hint:'Open the last tab.'}],
+  links:[['Model monitoring and drift',PH('02-ml-fundamentals/20-model-monitoring-and-drift')]]});
+
+lesson(2,{id:'psi',short:'Population Stability Index',title:'One number for how far a feature has moved',tag:'Behind Phase 2, lesson 20: Monitoring Models in Production',
+  lead:'PSI comes from credit scoring. Cut the reference values into ten bins that each hold 10 percent. Count what share of the current values lands in each bin. PSI adds up one term per bin: (current share minus reference share) times the log of their ratio.',
+  demo:'psi',takeaway:'By convention, below 0.1 is stable, 0.1 to 0.25 is a moderate shift, and above 0.25 is a significant shift. Treat the bands as a habit, not a test: PSI depends on the number of bins and the sample size.',
+  quiz:[{q:'A PSI of 0.30 means what, by convention?',o:['A significant shift', 'Stable', 'An error'],a:0,why:'It is above 0.25.',hint:'Read the takeaway.'},
+        {q:'What does each reference bin hold?',o:['10 percent of the reference data', 'One value', 'Half the data'],a:0,why:'Ten bins at the deciles.',hint:'Read the note above the bars.'}],
+  links:[['Model monitoring and drift',PH('02-ml-fundamentals/20-model-monitoring-and-drift')]]});
+
+lesson(2,{id:'ks',short:'KS statistic',title:'The largest gap between two distributions',tag:'Behind Phase 2, lesson 20: Monitoring Models in Production',
+  lead:'The Kolmogorov-Smirnov statistic D is the largest vertical gap between the two cumulative curves. It is 0 for identical samples and 1 for samples that do not overlap, and it needs no bins. With very large samples, the p-value goes to zero for a gap nobody cares about.',
+  demo:'ksd',takeaway:'Use D itself as the effect size. Alert only when both D and the p-value pass their thresholds.',
+  quiz:[{q:'A million events per window and a tiny shift. What happens?',o:['Significant p-value, but a tiny D', 'Nothing is significant', 'D becomes 1'],a:0,why:'Large samples make any gap "significant".',hint:'Use the starting values.'},
+        {q:'When should you alert?',o:['When both D and the p-value pass', 'When the p-value alone passes', 'Never'],a:0,why:'Require an effect size too.',hint:'Read the takeaway.'}],
+  links:[['Model monitoring and drift',PH('02-ml-fundamentals/20-model-monitoring-and-drift')]]});
+
+lesson(2,{id:'chi-square',short:'Chi-square for categories',title:'Drift in a category, such as payment channel',tag:'Behind Phase 2, lesson 20: Monitoring Models in Production',
+  lead:"For a categorical feature, count each category in the reference and current windows. The chi-square test compares those counts with what you would expect if nothing changed. A category that appears only in the current window adds a large term. Cramér's V is the matching effect size.",
+  demo:'chisq',takeaway:'Like KS, require both a small p-value and an effect size. The course uses a V of at least 0.10.',
+  quiz:[{q:'A brand new category appears. How does the test react?',o:['Strongly. It adds a large term', 'It ignores it', 'It crashes'],a:0,why:'Expected count in the reference was zero-like.',hint:'Drag the wallet slider.'},
+        {q:"What is Cramér's V used for?",o:['As the effect size', 'As the latency', 'As the cost'],a:0,why:'It says how big the change is.',hint:'Read the takeaway.'}],
+  links:[['Model monitoring and drift',PH('02-ml-fundamentals/20-model-monitoring-and-drift')]]});
+
+lesson(2,{id:'alert-policy',short:'Alerts people still read',title:'Many tests mean many false alarms',tag:'Behind Phase 2, lesson 20: Monitoring Models in Production',
+  lead:'Each test raises a false alarm now and then even when nothing changed. With 50 features checked every hour at a 0.05 rate, you expect about 60 false alarms a day. Four rules fix it: correct for multiple tests, require an effect size, require the drift to persist for several windows, and send warnings to a dashboard while alerts go to a person.',
+  demo:'falarm',takeaway:'The Bonferroni correction divides the allowed false-alarm rate by the number of tests.',
+  quiz:[{q:'50 features, hourly checks, a 0.05 rate. About how many false alarms a day?',o:['60', '5', '600'],a:0,why:'50 x 24 x 0.05 = 60.',hint:'Use the starting values.'},
+        {q:'What does a persistence rule do?',o:['Alerts only after several drift windows in a row', 'Deletes old alerts', 'Lowers latency'],a:0,why:'One noisy window is not enough.',hint:'Read the lead.'}],
+  links:[['Model monitoring and drift',PH('02-ml-fundamentals/20-model-monitoring-and-drift')]]});
+
+lesson(2,{id:'retraining',short:'When to retrain',title:'The kind of drift decides what helps',tag:'Behind Phase 2, lesson 20: Monitoring Models in Production',
+  lead:'Teams retrain on a schedule, when input drift stays high, or when an outcome metric drops. But retraining is not always the answer. Covariate drift with stable accuracy often needs nothing. Prior drift needs recalibration or a new threshold. Concept drift needs new labels first.',
+  demo:'retrain',takeaway:'Retraining on old labels after concept drift teaches the old concept again.',
+  quiz:[{q:'Concept drift happened. What comes first?',o:['Collect new labels', 'Retrain tonight on last quarter', 'Add more features'],a:0,why:'Old labels still describe the old relation.',hint:'Last card.'},
+        {q:'Inputs drifted but accuracy is stable. Action?',o:['Often none. Keep watching', 'Retrain immediately', 'Roll back'],a:0,why:'The model is still right for each input.',hint:'First card.'}],
+  links:[['Model monitoring and drift',PH('02-ml-fundamentals/20-model-monitoring-and-drift')]]});
+
+lesson(2,{id:'fs-readers',short:'Two readers of one feature',title:'Training wants history, serving wants now',tag:'Behind Phase 2, lesson 21: Feature Stores and Training-Serving Skew',
+  lead:'A feature has one definition and two readers. Training asks for the value at millions of past moments and can wait minutes. Serving asks for the latest value for one entity and needs it in a few milliseconds. A feature store fills an offline store and an online store from the same definitions.',
+  demo:'fsread',takeaway:'When the two readers compute "the same feature" differently, the model sees inputs it never trained on.',
+  quiz:[{q:'Which store holds the full history with timestamps?',o:['The offline store', 'The online store', 'Neither'],a:0,why:'Training reads it.',hint:'Look at the history card.'},
+        {q:'What is materialization?',o:['Copying the latest values from offline to online', 'Deleting old rows', 'Training the model'],a:0,why:'It keeps the online store filled.',hint:'Read the end message.'}],
+  links:[['Feature stores and training-serving skew',PH('02-ml-fundamentals/21-feature-stores-and-training-serving-skew')]]});
+
+lesson(2,{id:'fs-terms',short:'Entities, timestamps, TTL',title:'The four words on every feature row',tag:'Behind Phase 2, lesson 21: Feature Stores and Training-Serving Skew',
+  lead:'Every feature row has an entity (the key it describes), an event timestamp (when the value became true), a created timestamp (when the system wrote it), and a TTL (how old a value may be before it counts as missing).',
+  demo:'fsterms',takeaway:'A group of features with the same entity, source and TTL is often called a feature view.',
+  quiz:[{q:'A value is older than its TTL. What does the reader do?',o:['Treats it as missing and uses the default', 'Uses it anyway', 'Crashes'],a:0,why:'Old values are not trusted.',hint:'Open the TTL tab.'},
+        {q:'Which timestamp says when the value became true?',o:['Event timestamp', 'Created timestamp', 'TTL'],a:0,why:'Joins use it.',hint:'Open the second tab.'}],
+  links:[['Feature stores and training-serving skew',PH('02-ml-fundamentals/21-feature-stores-and-training-serving-skew')]]});
+
+lesson(2,{id:'pit-join',short:'Point-in-time joins',title:'A training row may only see the past',tag:'Behind Phase 2, lesson 21: Feature Stores and Training-Serving Skew',
+  lead:'A training row pairs a label with the feature values that existed at the label time. For each label: find the rows of the same entity, keep those at or before the label time, take the latest, and drop it if it is older than the TTL. A naive join on user id takes the newest row instead, which can come from after the label.',
+  demo:'pit',takeaway:'In the course demo the naive join looks better offline (0.948 against 0.893) and does worse on new data (0.763 against 0.876), because the newest snapshot leaks the answer.',
+  quiz:[{q:'Label on day 16, rows on days 7, 14, 21 and 28. Which row is correct?',o:['Day 14', 'Day 28', 'Day 21'],a:0,why:'The latest row at or before the label day.',hint:'Use the starting values.'},
+        {q:'Why does the naive join look better offline?',o:['It reads values from after the label, which contain the answer', 'It uses more data', 'It is faster'],a:0,why:'That is leakage.',hint:'Read the takeaway.'}],
+  links:[['Feature stores and training-serving skew',PH('02-ml-fundamentals/21-feature-stores-and-training-serving-skew')]]});
+
+lesson(2,{id:'skew-causes',short:'Training-serving skew',title:'Four ways the two paths disagree',tag:'Behind Phase 2, lesson 21: Feature Stores and Training-Serving Skew',
+  lead:'Training-serving skew is a gap between performance in training and in serving. In feature pipelines four causes come up again and again: two code paths, stale features, different defaults, and time travel (training reading values from after the label time).',
+  demo:'skewcause',takeaway:'Reuse code between the training pipeline and the serving pipeline whenever possible.',
+  quiz:[{q:'Training fills 365 for a new user and serving fills -1. Which cause?',o:['Different defaults', 'Time travel', 'Stale features'],a:0,why:'A missing value is filled two ways.',hint:'Third card.'},
+        {q:'What is "time travel" here?',o:['Training reads a value from after the label time', 'Serving is slow', 'The clock is wrong'],a:0,why:'The naive join does this.',hint:'Last card.'}],
+  links:[['Feature stores and training-serving skew',PH('02-ml-fundamentals/21-feature-stores-and-training-serving-skew')]]});
+
+lesson(2,{id:'registry',short:'Registry and backfills',title:'One definition feeds both paths',tag:'Behind Phase 2, lesson 21: Feature Stores and Training-Serving Skew',
+  lead:'The registry is the catalog of feature definitions: name, entity, source, transformation, window, default, TTL, owner, version. Both paths read it, and a change creates a new version. A new feature has no history, so a backfill runs the definition at each past date, reading only events at or before that date.',
+  demo:'registry',takeaway:'Backfills can still leak: a job run today may read data that arrived late or was corrected later. A strict join also checks the created timestamp.',
+  quiz:[{q:'Why does a change create a new version?',o:['So old models keep the feature they trained on', 'To use more disk', 'For fun'],a:0,why:'Changing it in place would shift their inputs.',hint:'Step 4.'},
+        {q:'What may a backfill run for a past date read?',o:['Only events at or before that date', 'Everything up to today', 'Nothing'],a:0,why:'Otherwise it leaks the future.',hint:'Step 2.'}],
+  links:[['Feature stores and training-serving skew',PH('02-ml-fundamentals/21-feature-stores-and-training-serving-skew')]]});
+
+lesson(2,{id:'skew-detect',short:'Finding skew',title:'Log serving features and compare three pairs',tag:'Behind Phase 2, lesson 21: Feature Stores and Training-Serving Skew',
+  lead:'Log the features at serving time. Then compare each logged value with what the training path gives for the same entity and time, and report the share of mismatches and the mean difference. Three comparisons find the cause: online read against training join, fresh compute against training join, and the second code path against fresh compute.',
+  demo:'skewfind',takeaway:'The fix has the same shape for every cause: one registry definition that both paths call, checked against logged serving features.',
+  quiz:[{q:'Which comparison isolates staleness?',o:['Fresh compute against training join', 'Online read against training join', 'None'],a:0,why:'The only difference is the age of the values.',hint:'Second tab.'},
+        {q:'What should online read against training join show when both use one definition?',o:['Zero skew', '83 percent mismatch', 'Random noise'],a:0,why:'They compute the same thing.',hint:'First tab.'}],
+  links:[['Feature stores and training-serving skew',PH('02-ml-fundamentals/21-feature-stores-and-training-serving-skew')]]});
+
+lesson(2,{id:'sd-launch',short:'From goal to safe launch',title:'The whole design in eight steps',tag:'Behind the course cheat sheet: ML System Design, Drift and Feature Stores',
+  lead:'This is the course cheat sheet as one walk-through: task, metrics, baselines, data, budgets, then shadow, canary and an A/B test. Use it as the outline for a system design interview answer.',
+  demo:'sdlaunch',takeaway:'In an interview, say the steps in this order and state your assumptions about load and budgets out loud.',
+  quiz:[{q:'What comes before choosing the model?',o:['The metrics and the baselines', 'The GPU', 'The logo'],a:0,why:'Decide how you will judge it first.',hint:'Steps 2 and 3.'},
+        {q:'What is the first rollout stage?',o:['Shadow', 'A/B test', 'Full launch'],a:0,why:'Nobody sees its output.',hint:'Step 6.'}],
+  links:[['Cheat sheet: ML system design, drift and feature stores','https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/cheatsheets/ml-system-design.md'],['ML system design',PH('02-ml-fundamentals/19-ml-system-design')]]});
+
+lesson(2,{id:'sd-fixes',short:'Failures and fixes',title:'Symptoms you can name, and what fixes each',tag:'Behind the course cheat sheet: ML System Design, Drift and Feature Stores',
+  lead:'Production ML fails in a small number of repeatable ways. Each has a known cause and a known fix. Being able to name them quickly is most of a debugging interview.',
+  demo:'sdfixes',takeaway:'Name the symptom, the cause, then the fix.',
+  quiz:[{q:'Offline 0.948, live worse. Most likely cause?',o:['A naive join read future rows', 'The GPU is slow', 'Too few alerts'],a:0,why:'Use a point-in-time join.',hint:'Second card.'},
+        {q:'60 false alarms a day. What fixes it?',o:['Bonferroni, an effect size and persistence', 'More features', 'A bigger window only'],a:0,why:'They cut false alarms.',hint:'Last card.'}],
+  links:[['Cheat sheet: ML system design, drift and feature stores','https://github.com/rohitg00/ai-engineering-from-scratch/blob/main/cheatsheets/ml-system-design.md']]});
 /* ================= GLOSSARY ================= */
 /* One entry per term. pat = regex source that finds it in lesson text (omit for glossary-only terms). */
 var GLOSSARY=[
@@ -3096,6 +3536,30 @@ var GLOSSARY=[
  {id:'killswitch',term:'kill switch',pat:'kill switch',def:'One control that halts all of an agent\'s actions right away.'},
  {id:'checkpoint',term:'checkpoint',pat:'checkpoints?',def:'A saved copy of the state you can go back to if a change goes wrong.'},
  {id:'sys12',term:'System 1 and System 2',pat:'System 1|System 2',def:'From psychology: System 1 is fast, automatic thinking. System 2 is slow, careful reasoning. In AI, a fast model or action head is System 1, and a model that reasons in steps or plans is System 2.'},
+ {id:'baseline',term:'baseline',pat:'baselines?',def:'A simple alternative the model must beat, such as always guessing the majority, a rule of thumb, or whatever makes the decision today.'},
+ {id:'heuristic',term:'heuristic',pat:'heuristics?',def:'A rule of thumb from domain knowledge, such as "call anyone idle for two weeks".'},
+ {id:'lift',term:'lift',pat:'lift',def:'The model score minus the score of the strongest baseline.'},
+ {id:'batchinf',term:'batch inference',pat:'batch inference',def:'A scheduled job scores everything and stores the results for lookup later.'},
+ {id:'onlineinf',term:'online inference',pat:'online inference',def:'The model scores each request at the moment it arrives.'},
+ {id:'qps',term:'QPS',pat:'QPS',def:'Queries per second. Size a system for the peak, not the average.'},
+ {id:'littles',term:"Little's law",pat:"Little's law",def:'Requests in progress equal throughput times latency.'},
+ {id:'leak',term:'label leakage',pat:'leakage|leaks? the label|leaks the answer',def:'When a feature contains information from after the outcome, so the model sees the answer in training and fails live.'},
+ {id:'labeldelay',term:'label delay',pat:'label delay',def:'The time between a prediction and the arrival of its true outcome.'},
+ {id:'fbloop',term:'feedback loop',pat:'feedback loops?',def:'When a model\'s decisions change the data that trains its next version.'},
+ {id:'drift',term:'drift',pat:'drift(?:ed|s)?',def:'When live data moves away from the data the model was trained on.'},
+ {id:'covdrift',term:'covariate drift',pat:'covariate drift',def:'The inputs change, but the same input still means the same answer.'},
+ {id:'priordrift',term:'prior drift',pat:'prior drift',def:'The share of each label changes, such as the fraud rate doubling.'},
+ {id:'conceptdrift',term:'concept drift',pat:'concept drift',def:'The same input now means a different answer. Only outcome monitors see it.'},
+ {id:'psi',term:'PSI (Population Stability Index)',pat:'PSI|Population Stability Index',def:'One number for how far a feature\'s distribution has moved from a reference. Below 0.1 is usually called stable.'},
+ {id:'ks',term:'KS statistic',pat:'KS statistic|Kolmogorov-Smirnov',def:'The largest gap between two cumulative distribution curves. 0 means identical, 1 means no overlap.'},
+ {id:'chisq',term:'chi-square test',pat:'chi-square',def:'A test for whether the counts of categories changed between two samples.'},
+ {id:'bonferroni',term:'Bonferroni correction',pat:'Bonferroni',def:'Dividing the allowed false-alarm rate by the number of tests, so many tests do not mean many false alarms.'},
+ {id:'featstore',term:'feature store',pat:'feature stores?',def:'A system that keeps feature history for training and the latest values for serving, both from one set of definitions.'},
+ {id:'ttl',term:'TTL (time to live)',pat:'TTL',def:'The maximum age of a value. Older than that counts as missing.'},
+ {id:'pitjoin',term:'point-in-time join',pat:'point-in-time joins?',def:'A join that gives each label the latest feature value from at or before the label time, never from after it.'},
+ {id:'skew',term:'training-serving skew',pat:'training-serving skew|skew',def:'A difference between the feature values or performance seen in training and in serving.'},
+ {id:'backfill',term:'backfill',pat:'backfills?',def:'Running a feature definition over past dates to create its history.'},
+ {id:'entity',term:'entity',pat:'entity|entities',def:'A thing the data is about, such as a user, a payment or a store. Features and predictions belong to one entity.'},
  {id:'curl',term:'curl',pat:'curl',def:'A command-line tool that downloads from a URL. Setup lines like "curl -LsSf <url> | sh" download an installer and run it. The flags mean: follow redirects (L), stay quiet (s), still show errors (S), and fail on server errors (f). Only run "| sh" lines from sources you trust.'},
  {id:'uv',term:'uv',pat:'uv',def:'A fast tool that installs Python versions, creates virtual environments and installs packages. The course uses it instead of plain pip.'},
  {id:'cuda',term:'CUDA',pat:'CUDA',def:'NVIDIA\'s system for running code on its GPUs. PyTorch uses it when you have an NVIDIA card.'},
@@ -3147,6 +3611,67 @@ function glMentions(g){
   return res;
 }
 
+/* ================= PREREQUISITES and INTERVIEW PRACTICE =================
+   PHASE_PRE: what the course's own phase README asks for before each phase.
+   LESSON_PRE: the "Prerequisites" line of the course lesson each lesson here is based on (generated from the course repo).
+   PRACTICE: the course's system design interview questions, in plain words, with a link to the full answer. */
+var PHASE_PRE={0:'Nothing. You need Git and Python 3.11 or newer to begin.',1:'Complete Phase 0, or confirm that Python 3.11+ and Git work.',2:'Phase 1 Math Foundations and NumPy.',
+ 3:'Phase 1 Linear Algebra Intuition. Phase 2 is recommended for model evaluation vocabulary.',4:'Phase 1 lesson 12, Tensor Operations, and Phase 3 lesson 11, Introduction to PyTorch.',
+ 5:'Phase 2 lesson 14, Naive Bayes. Python 3.11+ is enough for the first lesson.',6:'Phase 1 vectors, matrices and probability.',
+ 7:'Phase 3 Deep Learning Core, plus Phase 5 lessons 9 and 10 on sequence-to-sequence models and attention.',8:'Phase 2 ML Fundamentals, Phase 3 Deep Learning Core, and Phase 7 lesson 14, Build a Transformer from Scratch.',
+ 9:'Phase 1 probability and distributions, plus Phase 2 lesson 1 for the ML taxonomy.',10:'Phase 5 NLP Foundations. Phase 7 Transformers is strongly recommended before the model-building lessons.',
+ 11:'Phase 10 lessons 1 to 5, or equal knowledge of tokenization, data pipelines, pretraining and scaling.',12:'Phase 7 Transformers and Phase 4 Computer Vision.',13:'Phase 11 LLM completion APIs.',
+ 14:'Phase 11 LLM Engineering and Phase 13 Tools and Protocols.',15:'Phase 14 lesson 1, The Agent Loop.',16:'Phase 14 Agent Engineering. Node.js 20+ and npx for the first TypeScript demo.',
+ 17:'Phase 11 LLM Engineering and Phase 13 Tools and Protocols.',18:'Phase 10 lessons 6, 7 and 8 on SFT, RLHF and DPO.',19:'Choose a project whose listed phases you have completed. For example, the terminal coding agent expects Phases 11, 13, 14, 15 and 17.'};
+var LESSON_PRE={"temperature":"Phase 1, Lessons 06-07 (Probability, Bayes' Theorem)","noise":"Phase 1, Lessons 06 (Probability and Distributions), 07 (Bayes' Theorem)","precision-recall":"Phase 1 (Probability and Distributions, Statistics for ML), Phase 2 Lessons 1-8","context-window":"Phase 10 (LLMs from Scratch), Phase 11 Lesson 01-02","search-meaning":"Phase 11, Lesson 01 (Prompt Engineering)","chunking":"Phase 5 lesson 14 (Information Retrieval), Phase 5 lesson 22 (Embedding Models)","rag":"Phase 10 (LLMs from Scratch), Phase 11 Lessons 01-05","hnsw":"Phase 11, Lesson 01 (Prompt Engineering)","agentic-rag":"Phase 11, Lesson 06 (RAG)","hallucination":"Phase 10 (LLMs from Scratch), Phase 11 Lessons 01-05","json-output":"Phase 10, Lessons 01-05 (LLMs from Scratch)","tool-loop":"Phase 11 Lesson 03 (Structured Outputs)","error-analysis":"Phase 11 Lesson 01 (Prompt Engineering), Lesson 09 (Function Calling)","token-cost":"Phase 17 lesson 13 (Observability), Phase 17 lesson 14 (Caching)","backprop":"Lesson 03.02 (Multi-Layer Networks)","pixels":"Phase 1 Lesson 12 (Tensor Operations), Phase 3 Lesson 11 (Intro to PyTorch)","word-counts":"Phase 5 lesson 01 (Text Processing), Phase 2 lesson 02 (Linear Regression from Scratch)","sound-waves":"Phase 1 lesson 06 (Vectors and Matrices), Phase 1 lesson 14 (Probability Distributions)","attention":"Phase 3 (Deep Learning Core), Phase 5 Lesson 10 (Sequence-to-Sequence)","diffusion":"Phase 3 lesson 02 (Backprop), Phase 8 lesson 02 (VAE)","rewards":"Phase 1 lesson 06 (Probability and Distributions), Phase 2 lesson 01 (ML Taxonomy)","next-word":"Phase 10, Lessons 01-03 (Tokenizers, Building a Tokenizer, Data Pipelines)","multimodal":"Phase 12 lesson 01 (ViT patches), Phase 7 (Transformers)","mcp":"Phase 13, Lessons 01 through 05","agent-loop":"Phase 11 (LLM Engineering), Phase 13 (Tools and Protocols)","approval-gates":"Phase 15 lesson 12 (Durable execution), Phase 15 lesson 14 (Tripwires)","orchestrator":"Phase 16 lesson 04 (Primitive Model)","defense-layers":"Phase 18 lesson 01 (instruction-following), Phase 14 (agent engineering)","outcome":"Nothing","workflow":"Phase 14 lesson 47","assumptions":"Phase 14 lesson 48","smallest-slice":"Phase 14 lesson 49","specs":"Phase 14 lesson 50","eval-set":"Phase 11 Lesson 01 (Prompt Engineering), Lesson 09 (Function Calling)","production-app":"Phase 11 Lessons 01-15","success-metrics":"Phase 14 lessons 47 and 51","build-stage":"Phase 14 lessons 50 to 52","canary":"Phase 17 lesson 13 (Observability), Phase 17 lesson 21 (A/B Testing)","feedback-ratchet":"Phase 14 lessons 46 and 53","okf":"Phase 10 (LLMs from Scratch), Phase 11 Lessons 01-05","docker":"Phase 0, Lessons 01 and 03","data-git":"Phase 0, Lesson 01","debugging":"Lesson 1 (Dev Environment), basic PyTorch familiarity","prompts":"Phase 10, Lessons 01-05 (LLMs from Scratch)","few-shot":"Lesson 11.01 (Prompt Engineering)","caching":"Phase 11 Lesson 09 (Function Calling)","guardrails":"Phase 11 Lesson 01 (Prompt Engineering), Phase 11 Lesson 09 (Function Calling)","tool-interface":"Phase 11 (LLM completion APIs)","tool-schema":"Phase 13 lesson 01 (the tool interface), Phase 13 lesson 04 (structured output)","observability":"Phase 17 lesson 08 (Inference Metrics), Phase 14 (Agent Engineering)","gateway":"Phase 17 lesson 01 (Managed LLM Platforms), Phase 17 lesson 16 (Model Routing)","ai-sre":"Phase 17 lesson 13 (Observability), Phase 17 lesson 24 (Chaos Engineering)","secrets":"Phase 17 lesson 19 (AI Gateways), Phase 17 lesson 13 (Observability)","verification-gates":"Phase 14 lesson 33 (Rules), Phase 14 lesson 36 (Scope), Phase 14 lesson 37 (Feedback)","mcp-server":"Phase 13, Lesson 06","workflow-patterns":"Phase 14 lesson 01 (Agent Loop)","agent-sdk":"Phase 14 lesson 01 (Agent Loop), Phase 14 lesson 10 (Skill Libraries)","failure-modes":"Phase 14 lesson 05 (Self-Refine and CRITIC), Phase 14 lesson 24 (Observability)","prompt-injection":"Phase 14 lesson 06 (Tool Use), Phase 14 lesson 21 (Computer Use)","why-agents-fail":"Phase 14 lesson 01 (Agent Loop), Phase 14 lesson 26 (Failure Modes)","minimal-workbench":"Phase 14 lesson 31 (Why Capable Models Still Fail)","rules-as-checks":"Phase 14 lesson 32 (Minimal Workbench)","repo-memory":"Phase 14 lesson 32 (Minimal Workbench)","init-scripts":"Phase 14 lesson 32 (Minimal Workbench), Phase 14 lesson 34 (Repo Memory)","scope-contracts":"Phase 14 lesson 32 (Minimal Workbench), Phase 14 lesson 33 (Rules as Constraints)","feedback-loops":"Phase 14 lesson 32 (Minimal Workbench), Phase 14 lesson 35 (Init Script)","reviewer-agent":"Phase 14 lesson 38 (Verification Gate)","handoff":"Phase 14 lesson 34 (Repo Memory), Phase 14 lesson 38 (Verification), Phase 14 lesson 39 (Reviewer)","frame-task":"Phase 14 lessons 31 and 36","plan-evidence":"Phase 14 lesson 43","delegate":"Phase 14 lessons 39 and 44","tokenizers":"Phase 05 (NLP Foundations)","transformer-block":"Phase 7 lesson 02 (Self-Attention), Phase 7 lesson 03 (Multi-Head Attention), Phase 7 lesson 04 (Positional Encoding)","kv-cache":"Phase 7 lesson 02 (Self-Attention), Phase 7 lesson 05 (Full Transformer), Phase 7 lesson 07 (GPT)","sft":"Phase 10, Lesson 04 (Pre-Training a Mini GPT)","rlhf":"Phase 10, Lesson 06 (Instruction Tuning / SFT)","dpo":"Phase 10, Lesson 07 (RLHF)","quantization":"Phase 10, Lessons 01-10 (LLMs from Scratch)","inference-opt":"Phase 10, Lessons 01-08 (Transformer architecture, attention)","lora":"Phase 10, Lesson 06 (Instruction Tuning / SFT)","vllm":"Phase 17 lesson 01 (Model Serving), Phase 11 (LLM Engineering)","inference-metrics":"Phase 17 lesson 04 (Serving Engine Internals)","routing":"Phase 17 lesson 01 (Managed LLM Platforms), Phase 17 lesson 19 (AI Gateways)","finops":"Phase 17 lesson 13 (Observability), Phase 17 lesson 14 (Caching)","hybrid-search":"Phase 11, Lesson 06 (RAG)","terminal":"Phase 0, Lesson 01","dev-stack":"Nothing","eval-layers":"All of Phase 14","ab-testing":"Phase 17 lesson 13 (Observability), Phase 17 lesson 20 (Progressive Deployment)","load-testing":"Phase 17 lesson 08 (Inference Metrics), Phase 17 lesson 03 (GPU Autoscaling)","prompt-caching":"Phase 11 lesson 01 (Prompt Engineering), Phase 11 lesson 05 (Context Engineering), Phase 11 lesson 11 (Caching and Cost)","cache-kinds":"Phase 17 lesson 04 (Serving Engine Internals), Phase 17 lesson 06 (SGLang RadixAttention)","batch-apis":"Phase 17 lesson 14 (Prompt and Semantic Caching)","compliance":"Phase 17 lesson 25 (Security), Phase 17 lesson 13 (Observability)","platforms":"Phase 11 (LLM Engineering), Phase 13 (Tools and Protocols)","function-calling":"Phase 13 lesson 01 (the tool interface)","parallel-tools":"Phase 13 lesson 02 (function calling deep dive)","mcp-security":"Phase 13 lesson 07 (MCP server), Phase 13 lesson 08 (MCP client)","runtimes":"Phase 14 lesson 13 (LangGraph), Phase 14 lesson 22 (Voice)","agent-memory":"Phase 14 lesson 01 (Agent Loop), Phase 14 lesson 06 (Tool Use)","feedback-system":"Phase 14 lessons 37 to 41","human-eval":"Phase 11 Lesson 01 (Prompt Engineering), Lesson 09 (Function Calling)","trajectory-evals":"All of Phase 14","sycophancy":"Phase 18 lesson 01 (InstructGPT), Phase 18 lesson 02 (Reward hacking)","reward-hacking":"Phase 18 lesson 01 (InstructGPT), Phase 10 lesson 07 (RLHF)","fairness":"Phase 05 (word embeddings), Phase 18 lesson 01 (instruction following)","model-cards":"Phase 18 lesson 18 (safety frameworks), Phase 18 lesson 24 (regulatory)","why-multi":"Phase 14 (Agent Engineering)","handoffs":"Phase 16 lesson 04 (Primitive Model)","blackboard":"Phase 16 lesson 04 (Primitive Model), Phase 16 lesson 09 (Parallel Swarm Networks)","multi-failures":"Phase 16 lesson 13 (Shared Memory), Phase 16 lesson 14 (Consensus and BFT), Phase 16 lesson 15 (Voting and Debate Topology)","a2a":"Phase 16 lesson 04 (Primitive Model)","durable":"Phase 15 lesson 10 (Permission modes), Phase 15 lesson 01 (Long-horizon agents)","cost-governor":"Phase 15 lesson 10 (Permission modes), Phase 15 lesson 12 (Durable execution)","kill-switch":"Phase 15 lesson 13 (Cost governors), Phase 15 lesson 10 (Permission modes)","checkpoints":"Phase 15 lesson 12 (Durable execution), Phase 15 lesson 15 (Propose-then-commit)","patches":"Phase 7 (Transformers), Phase 4 (Computer Vision)","doc-vision":"Phase 12 lesson 05 (LLaVA), Phase 5 (NLP)","computer-use":"Phase 12 lesson 05 (LLaVA), Phase 12 lesson 09 (Qwen-VL JSON), Phase 14 (Agent Engineering)","dual-system":"Phase 12 lesson 05 (LLaVA), Phase 15 (Autonomous Systems, referenced)","sd-task":"Phase 2, Lessons 09 (Model Evaluation) and 13 (ML Pipelines)","sd-when-not":"Phase 2, Lessons 09 (Model Evaluation) and 13 (ML Pipelines)","sd-metrics":"Phase 2, Lessons 09 (Model Evaluation) and 13 (ML Pipelines)","sd-baselines":"Phase 2, Lessons 09 (Model Evaluation) and 13 (ML Pipelines)","sd-data":"Phase 2, Lessons 09 (Model Evaluation) and 13 (ML Pipelines)","sd-budgets":"Phase 2, Lessons 09 (Model Evaluation) and 13 (ML Pipelines)","sd-serving":"Phase 2, Lessons 09 (Model Evaluation) and 13 (ML Pipelines)","sd-rollout":"Phase 2, Lessons 09 (Model Evaluation) and 13 (ML Pipelines)","sd-feedback":"Phase 2, Lessons 09 (Model Evaluation) and 13 (ML Pipelines)","sd-failures":"Phase 2, Lessons 09 (Model Evaluation) and 13 (ML Pipelines)","sd-design-doc":"Phase 2, Lessons 09 (Model Evaluation) and 13 (ML Pipelines)","mon-layers":"Phase 2, Lessons 09 (Model Evaluation), 16 (Anomaly Detection), and 19 (ML System Design)","drift-kinds":"Phase 2, Lessons 09 (Model Evaluation), 16 (Anomaly Detection), and 19 (ML System Design)","label-delay":"Phase 2, Lessons 09 (Model Evaluation), 16 (Anomaly Detection), and 19 (ML System Design)","windows":"Phase 2, Lessons 09 (Model Evaluation), 16 (Anomaly Detection), and 19 (ML System Design)","psi":"Phase 2, Lessons 09 (Model Evaluation), 16 (Anomaly Detection), and 19 (ML System Design)","ks":"Phase 2, Lessons 09 (Model Evaluation), 16 (Anomaly Detection), and 19 (ML System Design)","chi-square":"Phase 2, Lessons 09 (Model Evaluation), 16 (Anomaly Detection), and 19 (ML System Design)","alert-policy":"Phase 2, Lessons 09 (Model Evaluation), 16 (Anomaly Detection), and 19 (ML System Design)","retraining":"Phase 2, Lessons 09 (Model Evaluation), 16 (Anomaly Detection), and 19 (ML System Design)","fs-readers":"Phase 2, Lessons 08 (Feature Engineering), 13 (ML Pipelines), 15 (Time Series), and 19 (ML System Design)","fs-terms":"Phase 2, Lessons 08 (Feature Engineering), 13 (ML Pipelines), 15 (Time Series), and 19 (ML System Design)","pit-join":"Phase 2, Lessons 08 (Feature Engineering), 13 (ML Pipelines), 15 (Time Series), and 19 (ML System Design)","skew-causes":"Phase 2, Lessons 08 (Feature Engineering), 13 (ML Pipelines), 15 (Time Series), and 19 (ML System Design)","registry":"Phase 2, Lessons 08 (Feature Engineering), 13 (ML Pipelines), 15 (Time Series), and 19 (ML System Design)","skew-detect":"Phase 2, Lessons 08 (Feature Engineering), 13 (ML Pipelines), 15 (Time Series), and 19 (ML System Design)","sd-launch":"Phase 2, Lessons 09 (Model Evaluation) and 13 (ML Pipelines)"};
+var LEVELS={1:'Screen',2:'Working',3:'Senior',4:'Staff'};
+var PRACTICE=[
+ {f:'demo-to-product-signals',t:'The signals that a demo has become a product',k:'Concept',l:1,m:6,q:'You built a small web demo of a model for reviewers. Three months later a colleague asks whether it is "production". How do you tell, and what changes when the answer is yes?',
+  a:['It is a product when people outside the team use it every week, someone asks for an uptime target, users want to sign in or see history, the model cost is a budget line, or the input is covered by a contract or law.','Then it moves to the production stack: sign-in, fallback models, tracing, and cost tracking per user.'],w:'"It is production when the code is clean." Usage, cost and obligations decide it, not code style.',rel:['production-app']},
+ {f:'metric-layers-churn-auc',t:'A churn model with a good AUC that nobody uses',k:'Concept',l:1,m:8,q:'A data scientist reports a churn classifier with an AUC of 0.91. Three months after launch, nobody on the retention team uses the scores. The algorithm was fine. Which design decisions were missing, and which metric should have been reported?',
+  a:['Nobody named the action a score starts.','Scores arrived weekly while the team called customers daily.','A feature leaked the label through the cancellation reason.','Nobody compared the model with the rule the team already used.','Report precision in the top 5 percent (the share actually contacted), with online, business and guardrail metrics.'],w:'"Train a better model." The failures happened before training.',rel:['sd-task','sd-metrics']},
+ {f:'when-not-ml',t:'When to say no to a model',k:'Concept',l:1,m:8,q:'A product owner asks for "a model" to decide which support tickets get escalated. Before you design anything, which questions decide whether this should be a learned model at all?',
+  a:['Does a short rule already reach the goal? Do labels exist or can they be collected? Will anyone act on the prediction? Does the data at decision time hold the signal? Is one error acceptable?','A rule wins when a few conditions stay correct and explain themselves, when there are no labels, or when the system costs more than the better decisions are worth.','A model wins when the rule has grown long and fragile.'],w:'"Always start with a model." A rule is cheaper to run, test and explain.',rel:['sd-when-not']},
+ {f:'ab-test-prompt-rollout',t:'Roll out a new prompt without betting the product on it',k:'Design',l:2,m:12,q:'A new version of a chat prompt looks better in a notebook. Design how it reaches users: the stages, how users are assigned, what you measure, and when it rolls back automatically.',
+  a:['Shadow first: run it on all traffic, log its answers, show nobody.','Then a small share of users (10% in the course), widened to 25%, 50% and 100% while the metrics hold.','Assign by a stable hash of the user id, so each user sees one version.','Roll back automatically when the new version\'s error rate reaches twice the old one over a window of requests.'],w:'"Ship it to everyone and watch." There is no comparison and no fast way back.',rel:['sd-rollout','canary','ab-testing']},
+ {f:'batch-vs-online-serving-choice',t:'Batch or online serving for a two-hour freshness limit',k:'Trade-off',l:2,m:12,q:'A feed ranking score must be no more than two hours old for 5,000,000 items, and the serving peak is 120 requests per second. Price batch and online serving, pick one, and say what would flip the choice.',
+  a:['A one-hour job with a two-hour limit must run every hour: 24 runs a day over 5 million items, $48.50 a day in the course cost model.','Two online replicas sized for the peak cost $24.00 a day and serve the freshest data.','Online wins here. It flips when the freshness limit relaxes (fewer runs) or peak traffic grows (many replicas).'],w:'"Batch is always cheaper." It scores everything on every run, whether or not anyone asks.',rel:['sd-serving']},
+ {f:'churn-model-system',t:'Design the churn system, not the churn model',k:'Design',l:2,m:20,q:'A subscription company with 2,000,000 users wants to reduce churn. The retention team can send a save offer to a small share of users each night. Design the system end to end. State the load and the budgets you assume.',
+  a:['Task: the chance a user cancels in the next 30 days, so the nightly job can pick the top 5 percent.','Serving: batch. One run a day costs under a dollar in the course model, against $24.00 a day for an online service nobody needs.','The model must beat the idle-days rule by a set lift.','Ship through shadow and canary, and fall back to that rule when anything fails.','Measure 30-day churn in the treated group against a random holdout.'],w:'"Report the AUC." It says nothing about the decision or the baseline.',rel:['sd-task','sd-serving','sd-baselines']},
+ {f:'classifier-head-swap-choice',t:'A spam classifier from 800 messages and a pretrained body',k:'Trade-off',l:2,m:12,q:'You have a small pretrained language model and 800 labeled messages, half spam. Design the classifier: what you keep, what you replace, which training regime you choose, and when the other would win.',
+  a:['Keep the pretrained body. Replace the vocabulary head with a small layer that outputs two classes.','With 800 examples, train only the new head with the body frozen. It is fast, light and rarely overfits.','Full fine-tuning takes about three times longer for a similar result. It pays off with far more data (around 80,000 examples) or a very different domain.'],w:'"Train a classifier from scratch." That throws away what the body already knows.',rel:['sft','lora']},
+ {f:'drift-monitoring-design',t:'Design monitoring for a payment risk model',k:'Design',l:2,m:15,q:'A payment risk model scores every transaction. Labels arrive weeks later as chargebacks. Design the monitoring: what you watch, how you compare windows, which statistics you compute, and how you keep the alert rate low.',
+  a:['Four layers: system health, inputs, predictions, and outcomes once labels arrive.','Compare a fixed reference window with sliding current windows.','PSI and the KS statistic for numbers, a chi-square test with Cramér\'s V for categories.','Alert only when a corrected p-value and an effect size both pass and the drift persists. Warnings go to a dashboard, not a person.'],w:'"Alert on every significant p-value." With many tests, people stop reading the alerts.',rel:['mon-layers','psi','ks','alert-policy']},
+ {f:'feature-store-design',t:'Design a feature store that keeps training honest',k:'Design',l:2,m:15,q:'Design the feature layer for a churn model. Training needs each feature for millions of user and time pairs. Serving needs the latest value for one user in a few milliseconds.',
+  a:['One registry holds each definition: entity, window, default, TTL and version. Both paths compute from it.','An offline store keeps full history. A materialization job copies the latest values to an online key-value store.','A training row takes the latest feature row at or before its label time, inside the TTL.','Without that join the course demo looks better offline (0.948 against 0.893) and worse on new data (0.763 against 0.876).'],w:'"Join labels to the feature table on user id." That reads the newest values, from after the label.',rel:['fs-readers','pit-join','registry']},
+ {f:'llm-cost-projection',t:'Project the monthly bill of a chat feature',k:'Estimate',l:2,m:10,q:'A chat feature expects 10,000 daily users with 5 queries each, about 1,500 input and 400 output tokens per query, at $2.50 per million input tokens and $10.00 per million output tokens. A cache has a 35% hit rate. Estimate the monthly bill and say which number you would attack first.',
+  a:['50,000 queries a day. A 35% hit rate leaves 32,500 that reach the model.','Over 30 days: about $3,656 of input and $3,900 of output, so about $7,556 a month.','Without the cache it would be $11,625, so the cache saves about $4,070.','Output tokens cost four times more each, so after the hit rate, attack output length.'],w:'"Input is most of the tokens, so cut the prompt first." Output is priced four times higher.',rel:['token-cost','caching']},
+ {f:'public-demo-controls',t:'Put a model demo behind a public link safely',k:'Design',l:2,m:15,q:'A reviewer and a customer want to try your model from a link, on a phone. Each model call costs money. Design the demo: the input contract, the order of the checks, the controls, and what the log may keep.',
+  a:['Write the contract first: for example a string of 1 to 500 characters, a model call with a known cost, and a clear error format.','Run checks cheapest first: body size, access token, per-client rate limit, input validation, daily cap, and only then the model.','Return a stable error code with a message, a hint and a request id.','Log the route, status, latency and input length with a hashed client id. Never the text or the address.'],w:'"Call the model, then validate." The expensive step should come last.',rel:['guardrails','secrets']},
+ {f:'streaming-and-fallback',t:'Keep a chat service answering when the provider does not',k:'Design',l:2,m:15,q:'Design the request path of a chat service that calls a hosted model. Users leave when nothing appears for a few seconds, the provider returns rate limits and errors at night, and the vector store sometimes times out.',
+  a:['Stream tokens, so the first one appears in a few hundred milliseconds.','Retry provider failures with growing waits and some randomness, capped at three retries.','Then fall through an ordered chain of models, to a cached answer, and finally a short "unavailable" message.','Secondary systems degrade instead of failing the request: no retrieval context if the vector store is down, a direct model call if the cache is down.'],w:'"Retry until it works." Unlimited retries make an outage worse.',rel:['production-app','gateway']},
+ {f:'batched-inference-api-budget',t:'Design a chat API for ten thousand daily users',k:'Design',l:3,m:25,q:'Design the service behind a chat product with 10,000 daily users sending about 5 queries each. Users must see a response start quickly, the tail must stay bounded, and there is a unit cost target.',
+  a:['Path: a gateway that authenticates and rate limits, input guardrails, a semantic cache, the model with streaming, output guardrails, an eval logger and a cost tracker.','Budgets from the course: median under 2 s, p99 under 10 s, cache hit rate above 30%, guardrail block rate under 5%, under $0.01 per request.','50,000 queries a day runs on a few async servers behind a load balancer. The servers mostly wait on the network, so scaling means more servers, not more cores.'],w:'"Buy bigger machines." The servers wait on the model provider, not on their own CPUs.',rel:['production-app','gateway','caching']},
+ {f:'concept-drift-blind-spot',t:'Accuracy fell and every input monitor stayed green',k:'Debug',l:3,m:12,q:'A payment model\'s accuracy fell from 0.946 to between 0.76 and 0.79 as labels arrived. Feature monitors and the score distribution stayed quiet. The team wants to retrain tonight on the last quarter of labeled data. What happened, and is that right?',
+  a:['The link between inputs and labels changed while the inputs did not. That is concept drift.','Input and prediction monitors compare distributions, so they cannot see it. Only the outcome monitor can, after the label delay.','Retraining tonight is wrong: most of those labels describe the old relation. Collect labels from after the change first.'],w:'"The monitors are broken." They worked. They just watch a different thing.',rel:['drift-kinds','retraining']},
+ {f:'eval-platform-ship-gate',t:'Design the gate that decides whether a model ships',k:'Design',l:3,m:20,q:'A team trains models in a multi-stage pipeline. Design the evaluation platform that decides whether a result can ship: what it reads, what a gate is, which gates catch most disasters, and how someone else can replay a decision.',
+  a:['It reads one manifest that describes the run fully: seed, code revision, and an input and output hash for every stage.','Gates are numeric limits written before the run starts.','A regression gate holds the new model to the previous one on core benchmarks. A drift budget gate caps how far the tuned model moved from its reference.','A failed gate holds the run for a named reviewer, and any override is logged. Anyone can replay the decision from the hashes.'],w:'"Decide the pass mark after seeing the numbers." Then the gate protects nothing.',rel:['eval-set','verification-gates']},
+ {f:'finetune-pipeline-design',t:'One command from raw data to a served tuned model',k:'Design',l:3,m:25,q:'A team wants to adapt an open model to its own domain and serve it at a measurable cost per million tokens. Design the pipeline so that one command runs it end to end.',
+  a:['Five stages, each with a config file in version control: data preparation, supervised fine-tuning, preference tuning, quantization, and serving.','Data hygiene: remove duplicates, filter quality, scrub personal data, and check that eval data did not leak into training.','Require an ablation table: base model, after fine-tuning, and after preference tuning, on the task benchmarks.','Release with serving numbers, cost per million tokens, a safety pass rate, and a model card with seeds, configs and commit hashes.'],w:'"Fine-tune and compare by feel." Without the base model in the table you cannot tell what helped.',rel:['sft','dpo','quantization','model-cards']},
+ {f:'fraud-check-100ms',t:'A payment fraud check inside a hundred milliseconds',k:'Design',l:3,m:20,q:'A payment service must approve, review or block each payment within 100 ms, at 400 requests per second at peak. Fraud labels arrive as chargebacks weeks later. Design the system, and name the two things that will quietly break it after launch.',
+  a:['Task: the chance a payment is fraud, with two thresholds for approve, review and block. Served online, because the decision needs the data of the request.','At 400 a second and 50 ms each, about 20 requests are in flight, so the service is small.','Train on a time split with features that exist at payment time. Roll out by shadow, then canary, with the rule as the default on timeout.','Quiet failure 1: the feedback loop. Blocked payments never get a label.','Quiet failure 2: concept drift. Only outcome monitors see it.'],w:'"Precompute fraud scores nightly for every card." The payment did not exist last night.',rel:['sd-serving','sd-budgets','sd-feedback','drift-kinds']},
+ {f:'rag-service-company-docs',t:'Design cited search over ten repositories of code',k:'Design',l:3,m:25,q:'An engineering organization wants to ask questions across 10 repositories with about 2 million lines of code and get answers that cite file and line. The index must stay fresh on every push. Design it, with budgets.',
+  a:['Chunk at function and class boundaries. Give each chunk a dense embedding, keyword terms and a one-sentence summary.','A query runs meaning search and keyword search together, merges, then reranks the top 50 to keep 10.','The model must cite every claim by file and line. Uncited claims are dropped.','On a push, only changed chunks are re-embedded, in under 60 seconds for a 50-file push.','Measure on 100 labeled questions: ranking quality, citation faithfulness and latency.'],w:'"Split files every 500 characters." Code should be cut where functions and classes end.',rel:['rag','chunking','hybrid-search','eval-set']},
+ {f:'skew-triage',t:'Offline accuracy was fine and live accuracy is not',k:'Debug',l:3,m:15,q:'A churn model scored well offline and does worse than the older, simpler model on live traffic. Serving features come from another team\'s service. You have a sample of logged serving requests. Design the triage.',
+  a:['Compare the same entity and time across three pairs.','Online store read against the training join: tests the whole system, and should show zero skew.','Fresh compute against the training join: isolates staleness.','The other team\'s code path against fresh compute: isolates code differences such as window edges and defaults.','The fix for every cause: one registry definition that both paths call.'],w:'"Retrain with more data." The inputs differ between training and serving, so more data will not help.',rel:['skew-causes','skew-detect']},
+ {f:'design-doc-blocking-review',t:'Review an ML design document and name the blockers',k:'Design',l:4,m:20,q:'You review ML design documents before training starts. A document for a fraud check proposes batch scoring with a one-hour job and a three-minute staleness limit, reports an offline AUC, lists a majority-class baseline, and has no rollout section. Walk through your review.',
+  a:['Expect nine sections. Six items block: the decision, a business metric, a heuristic or current-system baseline, no leakage, a shadow or canary stage with rollback, and a default for every failure.','This document fails at least three: the only baseline is trivial, there is no rollout or rollback, and batch cannot meet a three-minute limit when one job takes an hour.','Send it back with the blocking list first, and ask for precision at the decision threshold instead of AUC.'],w:'"The AUC is high, approve it." None of the blockers are about the score.',rel:['sd-design-doc','sd-serving']},
+ {f:'feedback-loop-clean-data',t:'Keep clean data when the model changes its own future',k:'Design',l:4,m:15,q:'A churn model that sends offers, a fraud model that blocks payments, and a ranking model that orders a feed all retrain monthly on their own data. Each gets a little worse after every retrain. Explain the shared cause and design the fix.',
+  a:['Each model\'s decisions change the data that trains its next version: a feedback loop.','Keep data the model did not influence: a random holdout that never gets the intervention, and a small share of random decisions.','Log the score and the decision with every row, joined to features as of the decision time, so training can separate influenced data from clean data.'],w:'"Retrain more often." That speeds the loop up.',rel:['sd-feedback','pit-join']},
+ {f:'pipeline-rollback-plan',t:'Write the rollback plan before the training run starts',k:'Trade-off',l:4,m:20,q:'A twelve-stage training pipeline runs from tokenizer to inference server, and pre-training costs weeks and millions of dollars. Before the run starts, write what happens when each stage fails.',
+  a:['Sort stages by the cost to rerun. Cheap ones (tokenizer, evaluation, quantization, the server) rerun in hours.','Tuning stages take days: keep the base checkpoint and rerun only those.','Pre-training takes weeks: the plan is the last good checkpoint plus revised later stages.','What to rerun comes from the dependency graph: the failed stage and everything after it.','A replay promises the same code, recipe, data and headline metrics, not bit-identical weights.'],w:'"Rerun everything from the start." The expensive stage should almost never rerun.',rel:['checkpoints','durable']}
+];
+
 /* ================= UI =================
    Views, picked by the hash: home (phase tiles), p-N (one phase and its lessons), a lesson id, glossary / g-term, about. */
 var cur=-1,cmdN=0,shown=null,booted=false,AT='afs-at';
@@ -3169,7 +3694,8 @@ function viewHome(v){
   if(i<0||state.done[all[i].id]){var from=i<0?0:i;i=-1;for(var k=0;k<all.length;k++){var j=(from+k)%all.length;if(!state.done[all[j].id]){i=j;break}}}
   v.append(h('section',{class:'hero'},
     h('h1',{id:'view-title',tabindex:'-1',text:'Learn the ideas behind AI by moving them around'}),
-    h('p',{text:all.length+' short lessons across 20 phases. Each one has something to play with and two quick questions.'})));
+    h('p',{text:all.length+' short lessons across 20 phases. Each one has something to play with and two quick questions.'}),
+    h('p',{class:'note'},'Nothing to install. ',h('a',{href:'#prereqs',text:'See what you need before you start'}))));
   if(i>=0){var L=all[i],p=PHASES[L.phase];
     v.append(h('section',{class:'cont','aria-label':started?'Continue':'Start'},
       h('div',{class:'ct'},h('span',{text:(started?'Next up in ':'Start with ')+'Phase '+p.n+': '+p.name}),h('strong',{text:L.title})),
@@ -3203,9 +3729,11 @@ function viewPhase(v,n){
     h('h1',{id:'view-title',tabindex:'-1',text:'Phase '+n+': '+p.name}),
     h('p',{class:'pgroup'},h('span',{class:'dot'}),GROUPS[groupOf(n)][0]),
     h('p',{class:'blurb',text:p.b}),
-    h('div',{class:'pprog'},h('span',{text:d+' of '+t+' lessons done'+(p.c?'. The full course has '+p.c+' in this phase.':'')}),bar(d,t)),
+    h('div',{class:'pprog'},h('span',{text:d+' of '+t+' lessons done'+(p.c?'. The course teaches this phase in '+p.c+' longer lessons.':'')}),bar(d,t)),
+    PHASE_PRE[n]?h('section',{class:'pre','aria-label':'Before this phase'},h('h2',{class:'sub',text:'Before this phase'}),h('p',{text:'The course asks for: '+PHASE_PRE[n]}),
+      h('p',{class:'note',text:'The short lessons here start from zero and need nothing installed.'}),needs.length?phChips('Builds on',needs):null):null,
     list,
-    needs.length?phChips('Builds on',needs):null,
+    n===2?h('a',{class:'cont plink',href:'#practice'},h('span',{class:'ct'},h('strong',{text:'System design interview practice'}),h('span',{text:PRACTICE.length+' questions from the course, with short answers'})),icon('next')):null,
     leads.length?phChips('Leads to',leads):null,
     h('a',{href:p.f?REPO+'/tree/main/phases/'+p.f:REPO+'/tree/main/phases',target:'_blank',rel:'noopener',text:'Open this phase in the course repo'})));
 }
@@ -3222,7 +3750,9 @@ function buildQuiz(i){
   var L=flat()[i],box=h('section',{class:'quiz'},h('h2',{class:'sub',text:'Check yourself'}));var solved=0,first=0;
   L.quiz.forEach(function(q,qi){
     var tries=0,why=h('p',{class:'why',role:'status','aria-live':'polite'}),btns=[],gid=L.id+'-q'+qi,opts=h('div',{class:'opts'});
-    q.o.forEach(function(txt,oi){
+    var ord=q.o.map(function(_,k){return k}),seed=0,key=gid+q.q;for(var c=0;c<key.length;c++)seed=(seed*31+key.charCodeAt(c))>>>0;
+    for(var z=ord.length-1;z>0;z--){seed=(seed*1103515245+12345)>>>0;var j=seed%(z+1),tmp=ord[z];ord[z]=ord[j];ord[j]=tmp}
+    ord.forEach(function(oi){var txt=q.o[oi];
       var b=h('button',{class:'opt',type:'button',text:txt,onclick:function(){
         if(b.disabled)return;tries++;
         if(oi===q.a){b.classList.add('ok');btns.forEach(function(x){x.disabled=true});why.className='why good';why.textContent='Correct. '+q.why;solved++;if(tries===1)first++;if(solved===L.quiz.length)finish(i,first)}
@@ -3263,7 +3793,7 @@ function viewLesson(v,i){
   var cmds=null,seen={},leadN=gl(L.lead,seen),takeN=gl(L.takeaway,seen);
   if(L.cmds){cmds=h('div',{class:'cmd'},h('h2',{class:'sub',text:'Run it for real'}));L.cmds.forEach(function(c){cmds.append(h('p',{class:'note'},gl(c[0],seen)),codeBox('cmd-'+L.id+'-'+(cmdN++),c[1]))})}
   var wb=watchBox(L),follow=followBox(L);
-  [h('h1',{id:'lesson-title',tabindex:'-1',text:L.title}),h('p',{class:'tag',text:L.tag}),h('p',{class:'lead'},leadN),
+  [h('h1',{id:'lesson-title',tabindex:'-1',text:L.title}),h('p',{class:'tag',text:L.tag}),LESSON_PRE[L.id]?h('p',{class:'lpre'},h('strong',{text:'Before this lesson: '}),LESSON_PRE[L.id]==='Nothing'?'nothing needed.':'the course asks for '+LESSON_PRE[L.id]+'. ',h('a',{href:'#prereqs',text:'All prerequisites'})):null,h('p',{class:'lead'},leadN),
     wb&&wb.head,wb&&wb.box,h('h2',{class:'sub',text:'Try it'}),demo,h('p',{class:'takeaway'},takeN),buildQuiz(i),follow,cmds,links].forEach(function(n){if(n)root.append(n)});
   var nav=h('nav',{class:'lnav','aria-label':'More lessons'},
     i>0?h('a',{class:'btn ghost',href:'#'+all[i-1].id},icon('prev'),all[i-1].short):h('span'),
@@ -3298,6 +3828,41 @@ function viewAbout(v){
   box.querySelector('#reset').addEventListener('click',function(){state={xp:0,done:{},streak:0,last:''};save();try{localStorage.removeItem(AT)}catch(e){}stats();box.querySelector('#reset-note').textContent='Progress cleared.'});
 }
 
+function viewPrereqs(v){
+  var tb=h('tbody');PHASES.forEach(function(p){tb.append(h('tr',null,h('td',null,h('a',{href:'#p-'+p.n,text:'Phase '+p.n+': '+p.name})),h('td',{text:PHASE_PRE[p.n]||''})))});
+  var ul=function(a){var u=h('ul',{class:'plain'});a.forEach(function(t){u.append(h('li',{text:t}))});return u};
+  v.append(h('div',{class:'phv'},crumbs([['#home','All phases']],'Prerequisites'),
+    h('h1',{id:'view-title',tabindex:'-1',text:'Before you start'}),
+    h('p',{class:'blurb',text:'What you need for this page, for the real course, and for each phase.'}),
+    h('h2',{class:'sub',text:'For this page'}),
+    ul(['Nothing to install. A browser is enough.','No math or coding is assumed. Each lesson starts from zero.','Later phases use ideas from earlier ones. Each phase page says what it builds on.']),
+    h('h2',{class:'sub',text:'For the real course'}),
+    ul(['You can write code in any language. Python helps.','You want to understand how AI actually works, not only call APIs.','Git and Python 3.11 or newer. Other tools are installed only when your route needs them.']),
+    h('h2',{class:'sub',text:'Phase by phase'}),
+    h('p',{class:'note',text:'Taken from each phase page of the course. A lesson page here also shows what the course asks for before that lesson.'}),
+    h('div',{class:'scroll'},h('table',null,h('thead',null,h('tr',null,h('th',{text:'Phase'}),h('th',{text:'The course asks for'}))),tb)),
+    h('a',{href:'#about',text:'Not sure where to begin? See where to start for your background'})));
+}
+function viewPractice(v){
+  var lvl=0,row=h('div',{class:'chips',role:'group','aria-label':'Filter by level'}),list=h('div',{class:'pracs'});
+  function draw(){row.textContent='';[[0,'All levels']].concat([1,2,3,4].map(function(n){return [n,LEVELS[n]]})).forEach(function(o){
+      row.append(h('button',{class:'chip',type:'button',text:o[1],'aria-pressed':lvl===o[0]?'true':'false',onclick:function(){lvl=o[0];draw()}}))});
+    list.textContent='';var all=flat();
+    PRACTICE.forEach(function(P,i){if(lvl&&P.l!==lvl)return;
+      var ans=h('div',{class:'pans',id:'pa-'+i,hidden:true}),ul=h('ul',{class:'plain'});P.a.forEach(function(t){ul.append(h('li',{text:t}))});
+      var rel=h('div',{class:'chips'});(P.rel||[]).forEach(function(id){var k=idx(id);if(k>-1)rel.append(h('a',{class:'chip',href:'#'+id,text:all[k].short}))});
+      ans.append(h('h3',{text:'A short answer'}),ul,h('p',null,h('strong',{text:'A common wrong answer: '}),P.w),rel.childNodes.length?h('div',{class:'rel'},h('p',{class:'note',text:'Learn it here'}),rel):null,
+        h('a',{href:REPO+'/blob/main/interviews/questions/system-design/'+P.f+'.md',target:'_blank',rel:'noopener',text:'Full answer, follow-ups and wrong answers in the course repo'}));
+      var btn=h('button',{class:'btn ghost small',type:'button','aria-expanded':'false','aria-controls':'pa-'+i,text:'Show a short answer'});
+      btn.addEventListener('click',function(){var open=ans.hidden;ans.hidden=!open;btn.setAttribute('aria-expanded',open?'true':'false');btn.textContent=open?'Hide the answer':'Show a short answer'});
+      list.append(h('article',{class:'prac'},h('h2',{text:P.t}),h('p',{class:'note',text:P.k+', '+LEVELS[P.l]+' level, about '+P.m+' minutes'}),h('p',{text:P.q}),h('div',null,btn),ans));
+    });
+  }
+  v.append(h('div',{class:'phv'},crumbs([['#home','All phases'],['#p-2','Phase 2: '+PHASES[2].name]],'System design practice'),
+    h('h1',{id:'view-title',tabindex:'-1',text:'System design interview practice'}),
+    h('p',{class:'blurb',text:'All '+PRACTICE.length+' system design questions from the course interview bank, in plain words. Answer out loud first, then check. Numbers come from the course lessons and use made-up prices.'}),row,list));
+  draw();
+}
 function route(force){
   var k=(location.hash||'').slice(1);if(!force&&k===shown)return;shown=k;redraws=[];
   var v=$('#view');v.textContent='';var i=idx(k),m,gloss=k==='glossary'||/^g-/.test(k);
@@ -3305,6 +3870,8 @@ function route(force){
   else if((m=/^p-(\d+)$/.exec(k))&&PHASES[+m[1]])viewPhase(v,+m[1]);
   else if(gloss)viewGloss(v,/^g-/.test(k)?k.slice(2):null);
   else if(k==='about')viewAbout(v);
+  else if(k==='prereqs')viewPrereqs(v);
+  else if(k==='practice')viewPractice(v);
   else viewHome(v);
   cur=i;document.title=gloss?'Glossary | AI From Scratch':'AI From Scratch';
   if(!/^g-/.test(k)){document.documentElement.scrollTop=0;document.body.scrollTop=0}
