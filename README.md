@@ -24,6 +24,9 @@ Each lesson has a short animation or video, a live demo, and a two-question quiz
 - System 1 and System 2 models: fast vs thinking models, and dual system robots
 - Phase tiles are colour coded by group, and hovering a tile previews its first lessons
 - A home page of phase tiles. Lessons show only after you open a phase
+- ML system design from Phase 2 of the course (lessons 19 to 21 and the cheat sheet): task framing, metrics, baselines, serving cost, rollout, feedback loops, the design document, drift monitoring, feature stores and training-serving skew
+- A system design interview practice page with the course's 22 questions
+- A prerequisites page, plus what the course asks for before each phase and lesson
 - A glossary of plain-language terms on its own page. Glossary words in lessons open it in a new tab
 - A map of all 20 phases and a "where to start" guide from the source README.
 
