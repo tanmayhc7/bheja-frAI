@@ -1878,6 +1878,23 @@ DEMOS.cuse=function(host){flow(host,{stages:['Screenshot','Decide','Act','Check'
  {at:1,say:'The model decides the next action.',box:'plan: click the Name field, type "Dana"'},
  {at:2,say:'The harness moves the mouse and types.',box:'click(212, 340)\ntype("Dana")'},
  {at:3,say:'Take a new screenshot and check it worked. Repeat. Put an approval gate before anything that cannot be undone.',box:'screenshot: Name shows "Dana". Next: ask before Submit.'}]})};
+/* ---- System 1 and System 2 models ---- */
+DEMOS.fastslow=function(host){sorter(host,{intro:'Fast models answer at once, like a reflex (System 1). Thinking models work through steps first, like careful reasoning (System 2). Which fits each task?',choices:['Fast model','Thinking model'],end:'Fast is cheaper and quicker. Thinking costs more time and money but helps on multi-step problems. Match the model to the task.',items:[
+ {t:'Label a support ticket as billing or technical.',a:0,why:'Quick pattern match. Speed and cost matter.'},
+ {t:'Find the bug in a tricky function that fails only sometimes.',a:1,why:'It needs step by step reasoning.'},
+ {t:'Autocomplete the next word as someone types.',a:0,why:'It must answer in milliseconds.'},
+ {t:'Plan a refund policy change and check it against 5 rules.',a:1,why:'Several constraints to weigh in order.'},
+ {t:'Rewrite one sentence more politely.',a:0,why:'Simple, and a fast answer is fine.'}]})};
+
+DEMOS.dual=function(host){
+  var plan=1,act=50,say=h('p',{class:'result','aria-live':'polite'}),box=h('pre',{class:'pf'});
+  function draw(){var per=Math.round(act/plan);
+    box.textContent='System 2 (big model, plans): '+plan+' plan'+(plan>1?'s':'')+' per second\nSystem 1 (small model, acts): '+act+' actions per second';
+    say.textContent='Each plan steers about '+per+' actions. One big model doing both would give only '+plan+' command'+(plan>1?'s':'')+' per second, too slow for a robot hand.'}
+  host.append(h('p',{class:'note',text:'Robots can split the job. A big slow model decides what to do. A small fast model does the moving. Rates are in the same range as the course example.'}));
+  var c1=ctl('dplan','Plans per second',1,5,1,plan,function(v){return Math.round(v)},function(v){plan=Math.round(v);draw()}),c2=ctl('dact','Actions per second',10,100,10,act,function(v){return Math.round(v)},function(v){act=Math.round(v);draw()});
+  host.append(c1.row,c2.row,box,say);draw();
+};
 /* ================= WATCH: step-through animations ================= */
 WATCH.git={label:'An animated commit graph: a branch is created, gets a commit, and is merged back into main.',height:230,hold:3000,steps:[
  {say:'A repository starts with one commit on main.',cmd:'git commit -m "start"'},
@@ -2934,6 +2951,20 @@ lesson(12,{id:'computer-use',short:'Computer use agents',title:'An agent that se
   quiz:[{q:'What does the agent see?',o:['Screenshots of the screen', 'The app source code', 'Nothing'],a:0,why:'It works from pixels.',hint:'Pictures.'},
         {q:'What belongs before Submit?',o:['An approval gate', 'Nothing', 'A bigger screenshot'],a:0,why:'Submitting may not be undoable.',hint:'Think of the approval lesson.'}],
   links:[['Multimodal agents and computer use',PH('12-multimodal-ai/25-multimodal-agents-computer-use')]]});
+/* ---- System 1 and 2 ---- */
+lesson(10,{id:'fast-vs-thinking',short:'Fast vs thinking models',title:'Reflex answers or step by step reasoning',tag:'Beyond the course: System 1 and System 2 models (idea from Kahneman)',
+  lead:'Psychologists describe two ways of thinking: System 1 is fast and automatic, System 2 is slow and careful. Models work the same way. A fast model answers straight away. A thinking model writes out steps first, which costs more time and money but helps on multi-step problems.',
+  demo:'fastslow',takeaway:'Use the fast model for simple, high-volume work. Pay for thinking only where mistakes are costly or the task has many steps. Many products route each request to one or the other.',
+  quiz:[{q:'Which task suits a fast model?',o:['Label a support ticket by topic', 'Debug a rare crash', 'Check a plan against five rules'],a:0,why:'A quick pattern match is enough.',hint:'Pick the reflex task.'},
+        {q:'What does a thinking model cost you?',o:['More time and money per answer', 'Nothing', 'Less accuracy always'],a:0,why:'It writes more steps before answering.',hint:'Think of extra work.'}],
+  links:[['STaR and self-taught reasoning (Phase 15)',PH('15-autonomous-systems/02-star-family-reasoning')],['Model routing (Phase 17)',PH('17-infrastructure-and-production/16-model-routing')]]});
+
+lesson(12,{id:'dual-system',short:'Dual system robots',title:'A slow planner and a fast actor',tag:'Behind Phase 12, lesson 21: Embodied VLAs (System 1 and System 2)',
+  lead:'Robot models often split in two. System 2 is a large vision-language model that reads the scene and your instruction and sets subgoals, around once a second. System 1 is a small action model that turns each subgoal into joint movements many times a second. The planner can be slow because the actor keeps the robot moving.',
+  demo:'dual',takeaway:'System 2 plans, System 1 acts. The split lets you have both big-model understanding and fast control.',
+  quiz:[{q:'Which part is System 1?',o:['The small fast action model', 'The large planner', 'The camera'],a:0,why:'It acts at a high rate.',hint:'Fast reflexes.'},
+        {q:'Why not use one big model for everything?',o:['It would be too slow to control movement', 'It is cheaper', 'It cannot see'],a:0,why:'Movement needs many commands per second.',hint:'Check the rates.'}],
+  links:[['Embodied VLAs',PH('12-multimodal-ai/21-embodied-vlas-openvla-pi0-groot')]]});
 /* ================= GLOSSARY ================= */
 /* One entry per term. pat = regex source that finds it in lesson text (omit for glossary-only terms). */
 var GLOSSARY=[
@@ -3039,6 +3070,7 @@ var GLOSSARY=[
  {id:'a2a',term:'A2A',pat:'A2A',def:'Agent to agent protocol. A shared way for separate agents, even from different vendors, to hand each other tasks.'},
  {id:'killswitch',term:'kill switch',pat:'kill switch',def:'One control that halts all of an agent\'s actions right away.'},
  {id:'checkpoint',term:'checkpoint',pat:'checkpoints?',def:'A saved copy of the state you can go back to if a change goes wrong.'},
+ {id:'sys12',term:'System 1 and System 2',pat:'System 1|System 2',def:'From psychology: System 1 is fast, automatic thinking. System 2 is slow, careful reasoning. In AI, a fast model or action head is System 1, and a model that reasons in steps or plans is System 2.'},
  {id:'curl',term:'curl',pat:'curl',def:'A command-line tool that downloads from a URL. Setup lines like "curl -LsSf <url> | sh" download an installer and run it. The flags mean: follow redirects (L), stay quiet (s), still show errors (S), and fail on server errors (f). Only run "| sh" lines from sources you trust.'},
  {id:'uv',term:'uv',pat:'uv',def:'A fast tool that installs Python versions, creates virtual environments and installs packages. The course uses it instead of plain pip.'},
  {id:'cuda',term:'CUDA',pat:'CUDA',def:'NVIDIA\'s system for running code on its GPUs. PyTorch uses it when you have an NVIDIA card.'},
