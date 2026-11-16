@@ -8,6 +8,8 @@
   --accent:#0B7A8A; --accent-deep:#085965; --on-accent:#FFFFFF; --accent-soft:#C9E8E6;
   --go:#3F7D1F; --go-soft:#E0F0D2; --bad:#C92F3B; --bad-soft:#FCE4E6; --xp:#9A5F00; --xp-soft:#FFEFC2;
   --shadow:rgba(12,43,48,.45); --ease:cubic-bezier(.22,1,.36,1);
+  --g0:#008300; --g0s:#DDF0DA; --g0t:#0B5E0B; --g1:#6250D6; --g1s:#E6E2FA; --g1t:#4636A8; --g2:#D95926; --g2s:#FBE6DC; --g2t:#96380F;
+  --g3:#0A8FA3; --g3s:#D3EEF1; --g3t:#086472; --g4:#D2457F; --g4s:#FADFEA; --g4t:#94244F; --g5:#2A78D6; --g5s:#DCE9FA; --g5t:#184F95;
   --f-display:'Fraunces',Georgia,'Times New Roman',serif;
   --f-body:'Instrument Sans','Avenir Next','Segoe UI',system-ui,sans-serif;
   --f-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
@@ -17,12 +19,16 @@
     --bg:#0A1F22; --surface:#112C30; --well:#173A3E; --ink:#E4F5F3; --ink2:#9CC4C4; --line:#245056;
     --accent:#3CC4D0; --accent-deep:#1B8F9B; --on-accent:#04222A; --accent-soft:#14464C;
     --go:#A3DB6B; --go-soft:#26401A; --bad:#FF7F88; --bad-soft:#4A1F27; --xp:#FFC95C; --xp-soft:#3D3212; --shadow:rgba(0,0,0,.7); color-scheme:dark;
+    --g0:#199E70; --g0s:#173A2C; --g0t:#9FE0C4; --g1:#9085E9; --g1s:#29264D; --g1t:#C9C3F7; --g2:#D95926; --g2s:#40241A; --g2t:#F5B79C;
+    --g3:#1FA3B5; --g3s:#14424A; --g3t:#A5E6EA; --g4:#D55181; --g4s:#44202F; --g4t:#F5BCD2; --g5:#3987E5; --g5s:#17304F; --g5t:#B7D3F6;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0A1F22; --surface:#112C30; --well:#173A3E; --ink:#E4F5F3; --ink2:#9CC4C4; --line:#245056;
   --accent:#3CC4D0; --accent-deep:#1B8F9B; --on-accent:#04222A; --accent-soft:#14464C;
   --go:#A3DB6B; --go-soft:#26401A; --bad:#FF7F88; --bad-soft:#4A1F27; --xp:#FFC95C; --xp-soft:#3D3212; --shadow:rgba(0,0,0,.7); color-scheme:dark;
+    --g0:#199E70; --g0s:#173A2C; --g0t:#9FE0C4; --g1:#9085E9; --g1s:#29264D; --g1t:#C9C3F7; --g2:#D95926; --g2s:#40241A; --g2t:#F5B79C;
+    --g3:#1FA3B5; --g3s:#14424A; --g3t:#A5E6EA; --g4:#D55181; --g4s:#44202F; --g4t:#F5BCD2; --g5:#3987E5; --g5s:#17304F; --g5t:#B7D3F6;
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:400 16px/1.6 var(--f-body);padding-block:12px 48px;
@@ -268,6 +274,25 @@ a.chip:hover,.chip:hover{border-color:var(--accent)}
 .lnav{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
 .lnav .btn{max-width:100%}
 .foot a{color:var(--ink2)}
+.g0{--g:var(--g0);--gs:var(--g0s);--gt:var(--g0t)}.g1{--g:var(--g1);--gs:var(--g1s);--gt:var(--g1t)}.g2{--g:var(--g2);--gs:var(--g2s);--gt:var(--g2t)}
+.g3{--g:var(--g3);--gs:var(--g3s);--gt:var(--g3t)}.g4{--g:var(--g4);--gs:var(--g4s);--gt:var(--g4t)}.g5{--g:var(--g5);--gs:var(--g5s);--gt:var(--g5t)}
+.key{display:flex;flex-wrap:wrap;gap:8px 18px;margin:0;padding:0;list-style:none;font-size:.875rem;color:var(--ink2)}
+.key li{display:inline-flex;align-items:center;gap:8px}
+.dot{width:12px;height:12px;border-radius:4px;background:var(--g);flex:none}
+.ptile{position:relative;overflow:hidden}
+.ptile:hover{border-color:var(--g)}
+.ptile .pn{min-width:40px;height:40px;padding:0 8px;border-radius:12px;display:inline-grid;place-items:center;background:var(--gs);color:var(--gt);font-size:1.25rem}
+.ptile .bar i,.ptile.all .bar i{background:var(--g)}
+.peek{position:absolute;inset:0;padding:14px 16px;background:var(--surface);display:flex;flex-direction:column;gap:6px;opacity:0;transform:translateY(8px);pointer-events:none;
+  transition:opacity .18s var(--ease),transform .18s var(--ease)}
+.ptile:focus-visible .peek{opacity:1;transform:none}
+@media (hover:hover){.ptile:hover .peek{opacity:1;transform:none}}
+.pgroup{display:flex;align-items:center;gap:8px;font-size:.875rem;font-weight:600;color:var(--gt);margin-top:-8px}
+.phv .bar i{background:var(--g,var(--accent))}
+.peek .pg{display:flex;align-items:center;gap:8px;font-size:.8125rem;font-weight:600;color:var(--gt)}
+.peek ul{margin:0;padding:0;list-style:none;display:grid;gap:2px;font-size:.875rem;line-height:1.45}
+.peek li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.peek .more{margin-top:auto;font-size:.8125rem;color:var(--ink2)}
 @media (max-width:520px){
   .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .ptile{min-height:136px;padding:14px}
@@ -3136,6 +3161,8 @@ function crumbs(links,here){var nav=h('nav',{class:'crumbs','aria-label':'You ar
   links.forEach(function(l){nav.append(h('a',{href:l[0],text:l[1]}),h('span',{class:'sep','aria-hidden':'true',text:'/'}))});
   nav.append(h('span',{'aria-current':'page',text:here}));return nav}
 
+var GROUPS=[['Foundations',[0,1,2,3]],['Seeing, reading, hearing',[4,5,6]],['How models work',[7,8,9,10]],['Building with LLMs',[11,12,13]],['Agents',[14,15,16]],['Shipping and safety',[17,18,19]]];
+function groupOf(n){for(var i=0;i<GROUPS.length;i++)if(GROUPS[i][1].indexOf(n)>-1)return i;return 0}
 function viewHome(v){
   var all=flat(),at=null;try{at=localStorage.getItem(AT)}catch(e){}
   var i=idx(at),started=Object.keys(state.done).length>0||i>=0;
@@ -3149,13 +3176,17 @@ function viewHome(v){
       h('a',{class:'btn',id:'continue',href:'#'+L.id},started?'Continue':'Start the first lesson',icon('next'))));
   }else v.append(h('section',{class:'cont'},h('div',{class:'ct'},h('strong',{text:'You have finished every lesson here.'}),h('span',{text:'Pick any phase to review it.'}))));
   var grid=h('div',{class:'tiles'});
-  PHASES.forEach(function(p){var t=p.lessons.length,d=doneIn(p),full=t>0&&d===t;
-    grid.append(h('a',{class:'ptile'+(full?' all':''),href:'#p-'+p.n,'aria-label':'Phase '+p.n+': '+p.name+', '+d+' of '+t+' lessons done'},
+  PHASES.forEach(function(p){var t=p.lessons.length,d=doneIn(p),full=t>0&&d===t,gi=groupOf(p.n),show=p.lessons.slice(0,3);
+    var ul=h('ul');show.forEach(function(L){ul.append(h('li',{text:L.short}))});
+    var peek=h('span',{class:'peek','aria-hidden':'true'},h('span',{class:'pg'},h('span',{class:'dot'}),GROUPS[gi][0]),ul,
+      h('span',{class:'more',text:t>show.length?'and '+(t-show.length)+' more':''}));
+    grid.append(h('a',{class:'ptile g'+gi+(full?' all':''),href:'#p-'+p.n,'aria-label':'Phase '+p.n+': '+p.name+', '+GROUPS[gi][0]+', '+d+' of '+t+' lessons done'},
       h('span',{class:'ptop'},h('span',{class:'pn',text:String(p.n)}),full?h('span',{class:'donemark'},icon('check'),'Done'):null),
       h('span',{class:'nm',text:p.name}),
-      h('span',{class:'pm'},h('span',{text:d?d+' of '+t+' done':t+(t===1?' lesson':' lessons')}),bar(d,t))));
+      h('span',{class:'pm'},h('span',{text:d?d+' of '+t+' done':t+(t===1?' lesson':' lessons')}),bar(d,t)),peek));
   });
-  v.append(h('section',{class:'sec','aria-labelledby':'ph-h'},h('h2',{id:'ph-h',text:'Phases'}),grid));
+  var key=h('ul',{class:'key','aria-label':'Colour key'});GROUPS.forEach(function(g,i){key.append(h('li',{class:'g'+i},h('span',{class:'dot'}),g[0]))});
+  v.append(h('section',{class:'sec','aria-labelledby':'ph-h'},h('h2',{id:'ph-h',text:'Phases'}),key,grid));
 }
 
 function leadsTo(n){var o=[];Object.keys(NEEDS).forEach(function(k){if(NEEDS[k].indexOf(n)>-1)o.push(+k)});return o}
@@ -3168,8 +3199,9 @@ function viewPhase(v,n){
       h('span',{class:'num','aria-hidden':'true'},dn?icon('check'):String(k+1)),
       h('span',{class:'lt'},h('strong',{text:L.short}),h('span',{text:L.title})))));
   });
-  v.append(h('div',{class:'phv'},crumbs([['#home','All phases']],'Phase '+n),
+  v.append(h('div',{class:'phv g'+groupOf(n)},crumbs([['#home','All phases']],'Phase '+n),
     h('h1',{id:'view-title',tabindex:'-1',text:'Phase '+n+': '+p.name}),
+    h('p',{class:'pgroup'},h('span',{class:'dot'}),GROUPS[groupOf(n)][0]),
     h('p',{class:'blurb',text:p.b}),
     h('div',{class:'pprog'},h('span',{text:d+' of '+t+' lessons done'+(p.c?'. The full course has '+p.c+' in this phase.':'')}),bar(d,t)),
     list,
