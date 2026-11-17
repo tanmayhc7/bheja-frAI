@@ -366,6 +366,10 @@ cd ai-engineering-from-scratch
 python3 phases/01-math-foundations/01-linear-algebra-intuition/code/vectors.py</code><button class="btn ghost small" type="button" data-copy="c2">Copy</button></div>
       </div>
     </div>
+    <div class="way" id="pfile" style="margin:1rem 0"><h2>Progress file</h2>
+      <p>Your progress lives in this browser only. To keep it in a file (or let an AI assistant tick things off for you), download it, edit it, then load it back.</p>
+      <div class="row"><button class="btn small" id="pf-down" type="button">Download progress file</button><label class="btn ghost small" for="pf-up">Load progress file</label><input id="pf-up" type="file" accept=".json,application/json" hidden><span class="note" id="pf-note" role="status"></span></div>
+    </div>
     <div class="row"><button class="btn ghost small" id="reset" type="button">Reset my progress</button><span class="note" id="reset-note" role="status"></span></div>
   </template>
 
@@ -3821,10 +3825,41 @@ function viewGloss(v,hit){
     h('div',{class:'gtools'},h('label',{for:'gl-q',class:'note',text:'Find a word'}),q,count),list));
   if(hit){var e=document.getElementById('g-'+hit);if(e){setTimeout(function(){if(e.scrollIntoView)e.scrollIntoView({block:'center'});e.focus({preventScroll:true})},0)}}
 }
+/* ---------- progress file: export / import so a person or an LLM can edit it ---------- */
+var PF_FORMAT='bheja-frai-progress';
+function pfExport(){
+  var L={};PHASES.forEach(function(p){p.lessons.forEach(function(l){var d=state.done[l.id];
+    L[l.id]={phase:p.n,title:l.title,done:!!d,xp:d?(d.xp||0):0}})});
+  return {format:PF_FORMAT,version:1,updated:new Date().toISOString(),
+    howToEdit:'To mark a lesson finished, change its "done" to true. To un-mark it, set false. Do not rename ids or add lessons. Optionally change "xp" (default 10 per finished lesson is used if it is 0). Save the file, then open the About page and press Load progress file.',
+    streak:state.streak,lastStudyDay:state.last,totalXp:state.xp,lessons:L};
+}
+function pfImport(o){
+  if(!o||o.format!==PF_FORMAT||!o.lessons||typeof o.lessons!=='object')throw new Error('This is not a progress file from this page.');
+  var ids={};flat().forEach(function(l){ids[l.id]=1});
+  var done={},xp=0,n=0,skipped=0;
+  Object.keys(o.lessons).forEach(function(k){var e=o.lessons[k];
+    if(!ids[k]){skipped++;return}
+    if(e&&e.done===true){var x=Math.max(0,+e.xp||0)||10;done[k]={xp:x};xp+=x;n++}});
+  state.done=done;state.xp=xp;
+  state.streak=Math.max(0,parseInt(o.streak,10)||0);state.last=typeof o.lastStudyDay==='string'?o.lastStudyDay:'';
+  save();stats();
+  return {n:n,skipped:skipped};
+}
 function viewAbout(v){
   var box=h('div',{class:'phv about'},crumbs([['#home','All phases']],'About the course'));
   box.append($('#t-about').content.cloneNode(true));v.append(box);
   box.querySelectorAll('[data-copy]').forEach(function(b){b.addEventListener('click',function(){copyText(b.getAttribute('data-copy'),b)})});
+  var pfn=box.querySelector('#pf-note');
+  box.querySelector('#pf-down').addEventListener('click',function(){
+    try{var b=new Blob([JSON.stringify(pfExport(),null,2)],{type:'application/json'});var a=document.createElement('a');
+      a.href=URL.createObjectURL(b);a.download='bheja-frai-progress.json';document.body.appendChild(a);a.click();a.remove();
+      pfn.textContent='Downloaded bheja-frai-progress.json';}catch(e){pfn.textContent='Could not make the file in this browser.'}});
+  box.querySelector('#pf-up').addEventListener('change',function(ev){
+    var f=ev.target.files&&ev.target.files[0];if(!f)return;var r=new FileReader();
+    r.onload=function(){try{var res=pfImport(JSON.parse(r.result));pfn.textContent='Loaded. '+res.n+' lessons marked done'+(res.skipped?' ('+res.skipped+' unknown ids ignored)':'')+'.'}
+      catch(e){pfn.textContent='Could not load: '+e.message}ev.target.value=''};
+    r.onerror=function(){pfn.textContent='Could not read that file.'};r.readAsText(f)});
   box.querySelector('#reset').addEventListener('click',function(){state={xp:0,done:{},streak:0,last:''};save();try{localStorage.removeItem(AT)}catch(e){}stats();box.querySelector('#reset-note').textContent='Progress cleared.'});
 }
 
