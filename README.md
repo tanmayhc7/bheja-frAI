@@ -27,6 +27,7 @@ Each lesson has a short animation or video, a live demo, and a two-question quiz
 - ML system design from Phase 2 of the course (lessons 19 to 21 and the cheat sheet): task framing, metrics, baselines, serving cost, rollout, feedback loops, the design document, drift monitoring, feature stores and training-serving skew
 - A system design interview practice page with the course's 22 questions
 - A prerequisites page, plus what the course asks for before each phase and lesson
+- A progress file: download your progress as JSON from the About page, let an AI assistant or you flip `done` to true, then load it back
 - A glossary of plain-language terms on its own page. Glossary words in lessons open it in a new tab
 - A map of all 20 phases and a "where to start" guide from the source README.
 
