@@ -1,49 +1,54 @@
 # bheja frAI
 
-An interactive beginner course on AI, built as a single self-contained web page. It explains the ideas behind the open-source course [AI Engineering from Scratch](https://github.com/rohitg00/ai-engineering-from-scratch) (MIT licensed, not affiliated).
+A hands-on introduction to AI engineering. Work through short browser-based lessons with animations, interactive demos, and quick quizzes, from vectors and model evaluation to LLMs, agents, and production systems.
 
-**Live page: https://tanmayhc7.github.io/bheja-frAI/**
+**[Open the course](https://tanmayhc7.github.io/bheja-frAI/)** · [Check prerequisites](https://tanmayhc7.github.io/bheja-frAI/#prereqs) · [Browse the glossary](https://tanmayhc7.github.io/bheja-frAI/#glossary)
 
-Each lesson has a short animation or video, a live demo, and a two-question quiz. XP and streaks are saved in the browser.
+## What you’ll learn
 
-## What is open so far
+The course spans 20 phases. Start with Setup and Tooling, or pick a phase that matches what you want to learn.
 
-- Phase 0, Setup and Tooling: what the repo setup does, Python environments, Git, why GPUs.
-- Phase 1, Math Foundations: vectors and similarity, a neuron as a weighted sum, gradient descent, temperature and top-p, is a change real.
-- Phase 2, ML Fundamentals: precision and recall.
-- Phase 11, LLM Engineering: the context window, search by meaning, chunking, RAG, fast search (HNSW), agentic RAG, hallucinations, JSON output, tool calling, reading failures.
-- Phase 17, Infrastructure and Production: what tokens cost.
-- Starter lessons for every other phase: backpropagation (3), images as numbers (4), counting words (5), sound waves (6), attention (7), diffusion (8), trial and reward (9), next-word prediction (10), pictures and words (12), MCP (13), the agent loop (14), approval gates (15), orchestrator and workers (16), layers of defense (18), what a finished project has (19).
-- The forward deployed route, complete: outcomes before output, the real workflow, assumptions and risk, the smallest slice, specs, evaluation, production app, success metrics, prototype vs pilot vs production, canary rollout, the feedback ratchet. Plus a short lesson on OKF as an alternative to RAG for exact facts.
-- Forward deployed foundations: Docker, data and git, silent bugs, prompts, few-shot, caching, guardrails, the tool interface, tool descriptions, observability, AI gateway, AI for incidents, secrets, verification gates.
-- Agents and tools: building an MCP server, workflow patterns, the agent SDK, failure modes, prompt injection, and the agent workbench lessons (rules as checks, repo memory, init scripts, scope contracts, real feedback, reviewer, handoff, framing, planning, delegation).
-- LLM concepts and serving for interviews: tokenizers, the transformer block, KV cache, SFT, RLHF, DPO, quantization, faster inference, LoRA, vLLM, serving metrics, model routing, FinOps. Plus hybrid search, document parsing, terminal skills and the dev environment.
-- Evaluation, cost and tools: eval layers, A/B testing, load testing, prompt caching, prefix vs semantic cache, batch APIs, compliance basics, managed platforms, function calling across providers, parallel tool calls, MCP security, agent runtimes, agent memory, turning corrections into controls, golden sets, scoring methods.
-- GraphRAG, agent trajectory evals, and the customer-facing skills (decision note, two-minute briefing, honest evidence, adoption, setting expectations)
-- Safety, multi-agent, autonomous-systems and multimodal lessons (sycophancy, reward hacking, fairness, model cards, handoffs, blackboard, A2A, durable execution, cost governors, kill switches, checkpoints, image patches, documents as images, computer use)
-- System 1 and System 2 models: fast vs thinking models, and dual system robots
-- Phase tiles are colour coded by group, and hovering a tile previews its first lessons
-- A home page of phase tiles. Lessons show only after you open a phase
-- ML system design from Phase 2 of the course (lessons 19 to 21 and the cheat sheet): task framing, metrics, baselines, serving cost, rollout, feedback loops, the design document, drift monitoring, feature stores and training-serving skew
-- A system design interview practice page with the course's 22 questions
-- A prerequisites page, plus what the course asks for before each phase and lesson
-- A progress file: download your progress as JSON from the About page, let an AI assistant or you flip `done` to true, then load it back
-- A glossary of plain-language terms on its own page. Glossary words in lessons open it in a new tab
-- A map of all 20 phases and a "where to start" guide from the source README.
+| Area | Example topics |
+| --- | --- |
+| Foundations | Python environments, vectors, gradient descent, precision and recall |
+| Models and modalities | Transformers, tokenization, diffusion, vision, and audio |
+| LLM applications | Retrieval-augmented generation (RAG), structured outputs, tool calling, and evaluation |
+| Agents and workflows | Model Context Protocol (MCP), agent loops, approval gates, and handoffs |
+| Production and safety | Serving costs, observability, rollout, guardrails, and failure modes |
+| ML system design | Baselines, deployment, drift monitoring, feature stores, and [interview practice](https://tanmayhc7.github.io/bheja-frAI/#practice) |
 
-## Files
+The home page gives you a starting point and lets you resume where you left off. XP, streaks, and lesson completion are saved in your browser. Use the [progress file controls](https://tanmayhc7.github.io/bheja-frAI/#about) to export or import a JSON backup.
 
-- `index.html` is the whole page. Open it in a browser. It loads fonts from Google Fonts and has no other dependencies.
-- `drafts/full-draft-phases-2-to-14.html` is an earlier larger draft with demos for fitting a line, tokenization, attention, next-token prediction, RAG and the agent loop. Those demos are meant to be moved into `index.html` phase by phase.
-- `tests/` has two jsdom smoke tests. Run `npm install` then `npm run smoke` and `npm run smoke-canvas` inside `tests/`.
+## Run locally
 
-## Adding a lesson
+Start a local server with Python 3 from the repository root.
 
-Inside the script in `index.html`:
+```sh
+python3 -m http.server --bind 127.0.0.1 8000
+```
 
-1. Write a demo: `DEMOS.myDemo = function(host){ ... }`
-2. Register it: `lesson(2, { id, short, title, tag, lead, demo:'myDemo', takeaway, quiz:[{q,o,a,why,hint}], links:[[label,url]] })`
+Open [localhost:8000](http://127.0.0.1:8000/). The site uses plain HTML, CSS, and JavaScript and requires no build step.
 
-The first argument is the phase number (0 to 19). Lesson ids must stay unique and unchanged, because progress is saved by id. The sidebar, counters, phase map and quiz pick the lesson up on their own.
+## Develop and test
 
-Numbers inside the demos are made up for teaching and do not come from the source course.
+| Path | Purpose |
+| --- | --- |
+| [`index.html`](index.html) | Site, lesson definitions, quizzes, and interactive demos |
+| [`media/`](media/) | Video assets used by lessons |
+| [`drafts/`](drafts/) | Earlier lesson and demo drafts |
+| [`tests/`](tests/) | Browser simulation and canvas smoke tests |
+
+To add a lesson, define a demo in `DEMOS` and register it with `lesson(phaseNumber, definition)` in `index.html`. Keep existing lesson IDs stable because browser progress is saved by ID.
+
+Run the smoke tests from the repository root with Node.js and npm.
+
+```sh
+cd tests
+npm ci
+npm run smoke
+npm run smoke-canvas
+```
+
+## Credits
+
+bheja frAI is an independent companion to [AI Engineering from Scratch](https://github.com/rohitg00/ai-engineering-from-scratch), the MIT-licensed course by rohitg00. Demo numbers are illustrative.
