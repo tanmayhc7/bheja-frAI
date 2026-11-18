@@ -1,4 +1,4 @@
-# bheja-frAI
+# bheja frAI
 
 An interactive beginner course on AI, built as a single self-contained web page. It explains the ideas behind the open-source course [AI Engineering from Scratch](https://github.com/rohitg00/ai-engineering-from-scratch) (MIT licensed, not affiliated).
 
