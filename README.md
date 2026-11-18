@@ -17,7 +17,7 @@ The course spans 20 phases. Start with Setup and Tooling, or pick a phase that m
 | Production and safety | Serving costs, observability, rollout, guardrails, and failure modes |
 | ML system design | Baselines, deployment, drift monitoring, feature stores, and [interview practice](https://tanmayhc7.github.io/bheja-frAI/#practice) |
 
-The home page gives you a starting point and lets you resume where you left off. XP, streaks, and lesson completion are saved in your browser. Use the [progress file controls](https://tanmayhc7.github.io/bheja-frAI/#about) to export or import a JSON backup.
+The home page gives you a starting point and lets you resume where you left off. XP, streaks, and lesson completion are saved in your browser. Open **Progress file** in the header to export or import a JSON backup.
 
 ## Run locally
 
