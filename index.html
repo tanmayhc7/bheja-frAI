@@ -316,7 +316,24 @@ a.plink:hover{outline:2px solid var(--accent);outline-offset:0}
 /* Home visual refresh: preserve the lesson system, sharpen the learning dashboard. */
 body{background-image:radial-gradient(circle at 8% 4%,color-mix(in srgb,var(--accent) 15%,transparent),transparent 28rem),radial-gradient(circle at 92% 12%,color-mix(in srgb,var(--g1) 9%,transparent),transparent 24rem),linear-gradient(90deg,color-mix(in srgb,var(--ink) 3%,transparent) 1px,transparent 1px),linear-gradient(color-mix(in srgb,var(--ink) 3%,transparent) 1px,transparent 1px);background-size:auto,auto,42px 42px,42px 42px}
 .wrap{gap:28px}
-.top{padding:8px 0 16px;border-bottom:1px solid var(--line)}
+.top{position:relative;padding:8px 0 16px;border-bottom:1px solid var(--line)}
+.progress-files summary{display:flex;align-items:center;gap:7px;list-style:none}
+.progress-files summary::-webkit-details-marker{display:none}
+.progress-files summary::after{content:"";width:6px;height:6px;border-right:2px solid;border-bottom:2px solid;transform:translateY(-2px) rotate(45deg)}
+.progress-files[open] summary::after{transform:translateY(2px) rotate(225deg)}
+.progress-file-panel{
+  position:absolute;top:calc(100% + 8px);right:0;z-index:2;
+  display:grid;gap:12px;width:min(100%,360px);padding:16px;
+  border:1px solid var(--line);border-radius:16px;background:var(--surface);
+  box-shadow:0 14px 32px -12px var(--shadow)
+}
+.theme-toggle{
+  position:fixed;z-index:3;right:max(16px,env(safe-area-inset-right,0px));
+  bottom:max(16px,env(safe-area-inset-bottom,0px));
+  display:grid;place-items:center;width:48px;height:48px;padding:0;border-radius:50%
+}
+.theme-toggle:hover,.progress-files summary:hover{border-color:var(--accent)}
+.theme-icon{width:20px;height:20px;border:2px solid currentColor;border-radius:50%;background:linear-gradient(90deg,currentColor 50%,transparent 50%)}
 .brand{display:inline-flex;align-items:center;gap:10px;font-size:1.3rem;letter-spacing:-.02em}
 .brand::before{content:"";width:28px;height:28px;border:3px solid var(--accent);border-radius:50%;background:linear-gradient(var(--accent),var(--accent)) center/100% 7px no-repeat;box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 12%,transparent);flex:none}
 .hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:30px;align-items:stretch;max-width:none;padding-top:26px}
@@ -362,11 +379,26 @@ body{background-image:radial-gradient(circle at 8% 4%,color-mix(in srgb,var(--ac
       <span class="pill"><span id="st-streak">0</span>-day streak</span>
       <span class="pill"><span id="st-done">0</span>/<span id="st-total">0</span> lessons</span>
       <a class="btn ghost small" id="gl-link" href="#glossary" target="_blank" rel="noopener">Glossary</a>
-      <button class="btn ghost small" id="theme" type="button">Switch theme</button>
+      <details class="progress-files" id="progress-files">
+        <summary class="btn ghost small">Progress file</summary>
+        <div class="progress-file-panel">
+          <p class="note">Progress saves in this browser. Download a backup or load a file to replace your saved progress.</p>
+          <div class="row">
+            <button class="btn small" id="pf-down" type="button">Download progress file</button>
+            <button class="btn ghost small" id="pf-load" type="button">Load progress file</button>
+          </div>
+          <input id="pf-up" type="file" accept=".json,application/json" hidden>
+          <p class="note" id="pf-note" role="status"></p>
+        </div>
+      </details>
     </div>
   </header>
 
   <main id="view"></main>
+
+  <button class="btn ghost theme-toggle" id="theme" type="button" aria-label="Switch theme" title="Switch theme">
+    <span class="theme-icon" aria-hidden="true"></span>
+  </button>
 
   <template id="t-about">
     <h1 id="view-title" tabindex="-1">Where to start in the real course</h1>
@@ -404,10 +436,6 @@ body{background-image:radial-gradient(circle at 8% 4%,color-mix(in srgb,var(--ac
 cd ai-engineering-from-scratch
 python3 phases/01-math-foundations/01-linear-algebra-intuition/code/vectors.py</code><button class="btn ghost small" type="button" data-copy="c2">Copy</button></div>
       </div>
-    </div>
-    <div class="way" id="pfile" style="margin:1rem 0"><h2>Progress file</h2>
-      <p>Your progress lives in this browser only. To keep it in a file (or let an AI assistant tick things off for you), download it, edit it, then load it back.</p>
-      <div class="row"><button class="btn small" id="pf-down" type="button">Download progress file</button><label class="btn ghost small" for="pf-up">Load progress file</label><input id="pf-up" type="file" accept=".json,application/json" hidden><span class="note" id="pf-note" role="status"></span></div>
     </div>
     <div class="row"><button class="btn ghost small" id="reset" type="button">Reset my progress</button><span class="note" id="reset-note" role="status"></span></div>
   </template>
@@ -3900,17 +3928,50 @@ function viewAbout(v){
   var box=h('div',{class:'phv about'},crumbs([['#home','All phases']],'About the course'));
   box.append($('#t-about').content.cloneNode(true));v.append(box);
   box.querySelectorAll('[data-copy]').forEach(function(b){b.addEventListener('click',function(){copyText(b.getAttribute('data-copy'),b)})});
-  var pfn=box.querySelector('#pf-note');
-  box.querySelector('#pf-down').addEventListener('click',function(){
-    try{var b=new Blob([JSON.stringify(pfExport(),null,2)],{type:'application/json'});var a=document.createElement('a');
-      a.href=URL.createObjectURL(b);a.download='bheja-frai-progress.json';document.body.appendChild(a);a.click();a.remove();
-      pfn.textContent='Downloaded bheja-frai-progress.json';}catch(e){pfn.textContent='Could not make the file in this browser.'}});
-  box.querySelector('#pf-up').addEventListener('change',function(ev){
-    var f=ev.target.files&&ev.target.files[0];if(!f)return;var r=new FileReader();
-    r.onload=function(){try{var res=pfImport(JSON.parse(r.result));pfn.textContent='Loaded. '+res.n+' lessons marked done'+(res.skipped?' ('+res.skipped+' unknown ids ignored)':'')+'.'}
-      catch(e){pfn.textContent='Could not load: '+e.message}ev.target.value=''};
-    r.onerror=function(){pfn.textContent='Could not read that file.'};r.readAsText(f)});
   box.querySelector('#reset').addEventListener('click',function(){state={xp:0,done:{},streak:0,last:''};save();try{localStorage.removeItem(AT)}catch(e){}stats();box.querySelector('#reset-note').textContent='Progress cleared.'});
+}
+
+function initProgressFiles(){
+  var details=$('#progress-files'),input=$('#pf-up'),note=$('#pf-note');
+  details.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&details.open){
+      details.open=false;
+      details.querySelector('summary').focus();
+    }
+  });
+  $('#pf-down').addEventListener('click',function(){
+    try{
+      var blob=new Blob([JSON.stringify(pfExport(),null,2)],{type:'application/json'});
+      var url=URL.createObjectURL(blob);
+      var link=h('a',{href:url,download:'bheja-frai-progress.json'});
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(function(){URL.revokeObjectURL(url)},1000);
+      note.textContent='Downloaded bheja-frai-progress.json';
+    }catch(e){note.textContent='Could not make the file in this browser.'}
+  });
+  $('#pf-load').addEventListener('click',function(){input.click()});
+  input.addEventListener('change',function(){
+    var file=input.files[0];
+    if(!file)return;
+    input.value='';
+    var reader=new FileReader();
+    reader.onload=function(){
+      try{
+        var result=pfImport(JSON.parse(reader.result));
+        var count=result.n+(result.n===1?' lesson':' lessons');
+        note.textContent='Loaded. '+count+' marked done'+(result.skipped?' ('+result.skipped+' unknown IDs ignored)':'')+'.';
+      }catch(e){
+        note.textContent='Could not load: '+e.message;
+        return;
+      }
+      // Refresh progress on the current view while keeping the controls open.
+      route(true,true);
+    };
+    reader.onerror=function(){note.textContent='Could not read that file.'};
+    reader.readAsText(file);
+  });
 }
 
 function viewPrereqs(v){
@@ -3948,7 +4009,7 @@ function viewPractice(v){
     h('p',{class:'blurb',text:'All '+PRACTICE.length+' system design questions from the course interview bank, in plain words. Answer out loud first, then check. Numbers come from the course lessons and use made-up prices.'}),row,list));
   draw();
 }
-function route(force){
+function route(force,keepPosition){
   var k=(location.hash||'').slice(1);if(!force&&k===shown)return;shown=k;redraws=[];
   var v=$('#view');v.textContent='';var i=idx(k),m,gloss=k==='glossary'||/^g-/.test(k);
   if(i>=0)viewLesson(v,i);
@@ -3959,14 +4020,17 @@ function route(force){
   else if(k==='practice')viewPractice(v);
   else viewHome(v);
   cur=i;document.title=gloss?'Glossary | bheja frAI':'bheja frAI';
-  if(!/^g-/.test(k)){document.documentElement.scrollTop=0;document.body.scrollTop=0}
-  if(booted&&!/^g-/.test(k)){var t=$('#lesson-title')||$('#view-title');if(t)t.focus({preventScroll:true})}
+  if(!keepPosition&&!/^g-/.test(k)){
+    document.documentElement.scrollTop=0;document.body.scrollTop=0;
+    if(booted){var t=$('#lesson-title')||$('#view-title');if(t)t.focus({preventScroll:true})}
+  }
   booted=true;
 }
 
 /* ---------- start ---------- */
 function init(){
   load();stats();
+  initProgressFiles();
   $('#gl-link').setAttribute('href',GLURL+'#glossary');
   $('#theme').addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme');var dark=c?c==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;
     document.documentElement.setAttribute('data-theme',dark?'light':'dark');redraws.forEach(function(f){f()})});
