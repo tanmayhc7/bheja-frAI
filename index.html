@@ -1,4 +1,4 @@
-<title>AI From Scratch</title>
+<title>bheja frAI</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
@@ -313,11 +313,50 @@ a.plink:hover{outline:2px solid var(--accent);outline-offset:0}
   .stats .pill{font-size:13px;padding:5px 10px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+/* Home visual refresh: preserve the lesson system, sharpen the learning dashboard. */
+body{background-image:radial-gradient(circle at 8% 4%,color-mix(in srgb,var(--accent) 15%,transparent),transparent 28rem),radial-gradient(circle at 92% 12%,color-mix(in srgb,var(--g1) 9%,transparent),transparent 24rem),linear-gradient(90deg,color-mix(in srgb,var(--ink) 3%,transparent) 1px,transparent 1px),linear-gradient(color-mix(in srgb,var(--ink) 3%,transparent) 1px,transparent 1px);background-size:auto,auto,42px 42px,42px 42px}
+.wrap{gap:28px}
+.top{padding:8px 0 16px;border-bottom:1px solid var(--line)}
+.brand{display:inline-flex;align-items:center;gap:10px;font-size:1.3rem;letter-spacing:-.02em}
+.brand::before{content:"";width:28px;height:28px;border:3px solid var(--accent);border-radius:50%;background:linear-gradient(var(--accent),var(--accent)) center/100% 7px no-repeat;box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 12%,transparent);flex:none}
+.hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:30px;align-items:stretch;max-width:none;padding-top:26px}
+.hero-copy{display:flex;flex-direction:column;align-items:flex-start;gap:16px;min-width:0}
+.hero h1{max-width:12ch;font-size:clamp(2.5rem,5.8vw,4.45rem);letter-spacing:-.04em}
+.hero p{max-width:58ch}
+.eyebrow{font:700 .7rem/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);display:inline-flex;align-items:center;gap:8px}
+.eyebrow::before{content:"";display:inline-block;width:20px;height:2px;border-radius:4px;background:var(--accent)}
+.hero-panel{align-self:end;display:flex;flex-direction:column;gap:18px;padding:22px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(145deg,color-mix(in srgb,var(--surface) 92%,transparent),color-mix(in srgb,var(--well) 86%,transparent));box-shadow:0 24px 44px -34px var(--shadow);position:relative;overflow:hidden}
+.hero-panel::after{content:"";position:absolute;width:170px;height:170px;right:-65px;top:-78px;border-radius:50%;background:color-mix(in srgb,var(--accent) 16%,transparent)}
+.hero-panel-top,.hero-panel-foot{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.live-dot{width:10px;height:10px;border-radius:50%;background:var(--go);box-shadow:0 0 0 5px color-mix(in srgb,var(--go) 16%,transparent);margin-right:5px}
+.hero-stats{display:flex;flex-wrap:wrap;gap:16px}
+.hero-stat{display:flex;flex-direction:column;gap:2px;padding-left:12px;border-left:2px solid var(--line)}
+.hero-stat:first-child{border-left-color:var(--accent)}
+.hero-stat b{font:700 1.45rem/1 var(--f-display);font-variant-numeric:tabular-nums}
+.hero-stat span{font-size:.75rem;color:var(--ink2)}
+.hero-panel-foot{justify-content:flex-start;font:500 .73rem var(--f-mono);color:var(--ink2);padding-top:4px}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--go);flex:none}
+.launch-card{border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));box-shadow:0 18px 34px -28px var(--shadow);position:relative;overflow:hidden}
+.launch-card::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--accent)}
+.launch-card .btn{min-width:170px}
+.phase-section{gap:18px}
+.section-head{display:flex;align-items:end;justify-content:space-between;gap:12px}
+.section-head h2{margin-top:7px}
+.section-note{font:500 .72rem var(--f-mono);color:var(--ink2)}
+.key{padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--surface) 70%,transparent)}
+.ptile{min-height:156px;padding:17px;border-radius:18px;box-shadow:0 12px 28px -28px var(--shadow)}
+.ptile::before{content:"";position:absolute;inset:0 0 auto;height:4px;background:var(--g);opacity:.85}
+.ptile:hover{transform:translateY(-4px);box-shadow:0 18px 28px -20px var(--shadow)}
+.ptile .pn{width:42px;height:42px;border-radius:13px;font-size:1.3rem}
+.ptile .nm{font-size:1.08rem}
+.bar{height:8px}
+@media (max-width:820px){.hero{grid-template-columns:1fr;gap:22px}.hero h1{max-width:13ch}.hero-panel{max-width:560px}.launch-card{padding:18px 20px}}
+@media (max-width:520px){.hero{padding-top:20px}.hero h1{font-size:clamp(2.35rem,12vw,3.6rem)}.hero-panel{padding:19px}.launch-card .btn{min-width:0}.section-head{align-items:flex-start;flex-direction:column;gap:4px}.key{gap:8px 12px}.ptile{min-height:142px;padding:14px}}
 </style>
 
 <div class="wrap">
   <header class="top">
-    <a class="brand" href="#home">AI From Scratch</a>
+    <a class="brand" href="#home">bheja frAI</a>
     <div class="stats" aria-label="Your progress">
       <span class="pill xp"><span id="st-xp">0</span> XP</span>
       <span class="pill"><span id="st-streak">0</span>-day streak</span>
@@ -3697,11 +3736,20 @@ function viewHome(v){
   var i=idx(at),started=Object.keys(state.done).length>0||i>=0;
   if(i<0||state.done[all[i].id]){var from=i<0?0:i;i=-1;for(var k=0;k<all.length;k++){var j=(from+k)%all.length;if(!state.done[all[j].id]){i=j;break}}}
   v.append(h('section',{class:'hero'},
-    h('h1',{id:'view-title',tabindex:'-1',text:'Learn the ideas behind AI by moving them around'}),
-    h('p',{text:all.length+' short lessons across 20 phases. Each one has something to play with and two quick questions.'}),
-    h('p',{class:'note'},'Nothing to install. ',h('a',{href:'#prereqs',text:'See what you need before you start'}))));
+    h('div',{class:'hero-copy'},
+      h('span',{class:'eyebrow',text:'Interactive field guide / AI engineering'}),
+      h('h1',{id:'view-title',tabindex:'-1',text:'Learn the ideas behind AI by moving them around'}),
+      h('p',{text:all.length+' short lessons across 20 phases. Each one has something to play with and two quick questions.'}),
+      h('p',{class:'note'},'Nothing to install. ',h('a',{href:'#prereqs',text:'See what you need before you start'}))),
+    h('div',{class:'hero-panel'},
+      h('div',{class:'hero-panel-top'},h('span',{class:'eyebrow',text:'Course snapshot'}),h('span',{class:'live-dot','aria-hidden':'true'})),
+      h('div',{class:'hero-stats'},
+        h('div',{class:'hero-stat'},h('b',{text:String(all.length)}),h('span',{text:'short lessons'})),
+        h('div',{class:'hero-stat'},h('b',{text:String(PHASES.length)}),h('span',{text:'phases mapped'})),
+        h('div',{class:'hero-stat'},h('b',{text:'No'}),h('span',{text:'accounts needed'}))),
+      h('div',{class:'hero-panel-foot'},h('span',{class:'status-dot','aria-hidden':'true'}),h('span',{text:'Progress stays in this browser'})))));
   if(i>=0){var L=all[i],p=PHASES[L.phase];
-    v.append(h('section',{class:'cont','aria-label':started?'Continue':'Start'},
+    v.append(h('section',{class:'cont launch-card','aria-label':started?'Continue':'Start'},
       h('div',{class:'ct'},h('span',{text:(started?'Next up in ':'Start with ')+'Phase '+p.n+': '+p.name}),h('strong',{text:L.title})),
       h('a',{class:'btn',id:'continue',href:'#'+L.id},started?'Continue':'Start the first lesson',icon('next'))));
   }else v.append(h('section',{class:'cont'},h('div',{class:'ct'},h('strong',{text:'You have finished every lesson here.'}),h('span',{text:'Pick any phase to review it.'}))));
@@ -3716,7 +3764,9 @@ function viewHome(v){
       h('span',{class:'pm'},h('span',{text:d?d+' of '+t+' done':t+(t===1?' lesson':' lessons')}),bar(d,t)),peek));
   });
   var key=h('ul',{class:'key','aria-label':'Colour key'});GROUPS.forEach(function(g,i){key.append(h('li',{class:'g'+i},h('span',{class:'dot'}),g[0]))});
-  v.append(h('section',{class:'sec','aria-labelledby':'ph-h'},h('h2',{id:'ph-h',text:'Phases'}),key,grid));
+  v.append(h('section',{class:'sec phase-section','aria-labelledby':'ph-h'},
+    h('div',{class:'section-head'},h('div',{},h('span',{class:'eyebrow',text:'The learning route'}),h('h2',{id:'ph-h',text:'Phases'})),h('span',{class:'section-note',text:PHASES.length+' paths / '+all.length+' stations'})),
+    key,grid));
 }
 
 function leadsTo(n){var o=[];Object.keys(NEEDS).forEach(function(k){if(NEEDS[k].indexOf(n)>-1)o.push(+k)});return o}
@@ -3908,7 +3958,7 @@ function route(force){
   else if(k==='prereqs')viewPrereqs(v);
   else if(k==='practice')viewPractice(v);
   else viewHome(v);
-  cur=i;document.title=gloss?'Glossary | AI From Scratch':'AI From Scratch';
+  cur=i;document.title=gloss?'Glossary | bheja frAI':'bheja frAI';
   if(!/^g-/.test(k)){document.documentElement.scrollTop=0;document.body.scrollTop=0}
   if(booted&&!/^g-/.test(k)){var t=$('#lesson-title')||$('#view-title');if(t)t.focus({preventScroll:true})}
   booted=true;
